@@ -1,0 +1,4 @@
+[build]
+jobs = 2
+target-dir = "target"
+
