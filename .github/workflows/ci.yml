@@ -1,0 +1,26 @@
+name: Build and test
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.96.1
+        with:
+          components: rustfmt, clippy
+      - name: Safe synthetic checks
+        shell: pwsh
+        run: ./scripts/verify.ps1
+      - name: Package standalone executable
+        shell: pwsh
+        run: ./scripts/package.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ScreenRecorder-windows
+          path: dist/*
+          if-no-files-found: error
