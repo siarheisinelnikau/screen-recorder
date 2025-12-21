@@ -47,13 +47,14 @@ Use the installed Rust **1.96.1** MSVC toolchain (minimum 1.95) and Microsoft C+
 .\scripts\package.ps1 -Offline
 ```
 
-Omit `-Offline` on a machine that needs to obtain dependencies. Packaging compiles a release binary with static CRT for `x86_64-pc-windows-msvc`, without starting it, and creates `dist/ScreenRecorder-v0.1.0.exe` and `dist/SHA256SUMS.txt`. Keep the MIT license and third-party notices with a distribution. The binary is not code-signed. No packaging step publishes anything.
+Omit `-Offline` on a machine that needs to obtain dependencies. Packaging compiles a release binary with static CRT for `x86_64-pc-windows-msvc`, without starting it, and creates `dist/ScreenRecorder-v0.1.0.exe`, `dist/SHA256SUMS.txt`, `dist/LICENSE.txt` and generated `dist/THIRD_PARTY_NOTICES.txt` (including bundled font terms). Keep the license and notices with a distribution; see [third-party components](docs/THIRD_PARTY.md). The binary is not code-signed. No packaging step publishes anything.
 
 The optional fixture generator also never accesses a desktop or device:
 
 ```powershell
 cargo run --offline --locked --example synthetic --jobs 2
 python .\scripts\inspect-fixtures.py
+python .\scripts\inspect-package.py # After packaging; reads headers/imports, never launches the EXE
 ```
 
 It creates a short artificial project, an edited AVI and a silent PCM WAV under a new `.test-output/synthetic-*` directory. The WAV is solely a fixture for future audio work; it is not muxed into the silent AVI. The Python inspector checks RIFF structure, frame indexes, dimensions, duration and silence without playing media. Tests also cover partial-tail recovery, source failure, a simulated full encoder sink, cancellation, non-overwrite behavior, edit persistence, update selection and verification. See [verification](docs/VERIFICATION.md) for actual results and deferred checks.

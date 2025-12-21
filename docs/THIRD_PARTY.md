@@ -1,0 +1,7 @@
+# Third-party components
+
+ScreenRecorder's own code is MIT-licensed. Rust crates retain their respective license terms; the locked versions are recorded in `Cargo.lock`. Direct dependencies include eframe/egui (MIT OR Apache-2.0), image (MIT OR Apache-2.0), windows-sys (MIT OR Apache-2.0), serde/serde_json (MIT OR Apache-2.0), anyhow (MIT OR Apache-2.0), semver (MIT OR Apache-2.0), sha2 (MIT OR Apache-2.0), ureq (MIT OR Apache-2.0) and the test-only tempfile crate (MIT OR Apache-2.0). Their transitive dependencies have additional compatible terms.
+
+The egui default font package contains font-specific licenses, including OFL-1.1 and Ubuntu-font-1.0; do not assume fonts are covered solely by the application MIT license. `scripts/notices.ps1` resolves the locked Windows dependency graph and collects package license declarations and included license/notice/copyright texts, including bundled font `.txt` files. The packaging script writes the result to `dist/THIRD_PARTY_NOTICES.txt` together with the application's `LICENSE.txt`. Distribute these ancillary files with the single standalone EXE. They do not constitute additional executable architecture variants.
+
+Release preparation should review the generated notices and licensing for the exact dependency graph being shipped. No competitor code, imagery or branding is bundled.
