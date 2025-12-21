@@ -355,6 +355,9 @@ impl RecorderApp {
         }));
     }
     fn install_update(&mut self, ctx: &egui::Context) {
+        if self.update_busy || !self.can_start() {
+            return;
+        }
         let Some(update) = self.update.clone() else {
             return;
         };
@@ -764,7 +767,7 @@ impl RecorderApp {
             ui.label(&self.update_message);
             if let Some(update)=&self.update {
                 ui.colored_label(Color32::LIGHT_GREEN,format!("Available: {}",update.version));
-                if ui.add_enabled(self.can_start(),egui::Button::new("Download and install (restarts app)")).clicked() {self.install_update(ui.ctx());}
+                if ui.add_enabled(self.can_start() && !self.update_busy,egui::Button::new("Download and install (restarts app)")).clicked() {self.install_update(ui.ctx());}
             }
             if self.installing && ui.button("Cancel download").clicked() {self.cancel.store(true,Ordering::Relaxed);}
             ui.small(updater::REPOSITORY);
@@ -809,7 +812,7 @@ impl eframe::App for RecorderApp {
     }
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ui, |ui| {
-            ui.horizontal(|ui| {
+            ui.horizontal_wrapped(|ui| {
                 ui.label(
                     RichText::new("SCREEN / RECORDER")
                         .size(23.0)
@@ -820,6 +823,24 @@ impl eframe::App for RecorderApp {
                 ui.selectable_value(&mut self.tab, Tab::Record, "Record");
                 ui.selectable_value(&mut self.tab, Tab::Edit, "Edit");
                 ui.selectable_value(&mut self.tab, Tab::Settings, "Settings");
+                if let Some(control) = &self.control {
+                    let paused = control.is_paused();
+                    ui.colored_label(
+                        if paused {
+                            Color32::YELLOW
+                        } else {
+                            Color32::LIGHT_RED
+                        },
+                        if paused {
+                            "● PAUSED"
+                        } else {
+                            "● RECORDING"
+                        },
+                    );
+                    if ui.small_button("Stop").clicked() {
+                        control.stop();
+                    }
+                }
                 if self.update.is_some() {
                     ui.colored_label(Color32::LIGHT_GREEN, "Update available");
                 }

@@ -24,7 +24,23 @@ Final command outcomes and packaged file properties are recorded in the implemen
 cargo run --offline --locked --example synthetic --jobs 2
 python .\scripts\inspect-fixtures.py
 .\scripts\package.ps1 -Offline
+python .\scripts\inspect-package.py
 ```
+
+## Results from this session
+
+| Check | Actual result |
+| --- | --- |
+| `scripts/verify.ps1 -Offline` | Formatting and Clippy with `-D warnings` passed; all 12 synthetic unit tests passed |
+| `cargo run --offline --locked --example synthetic --jobs 2` | Created only artificial project, AVI and silent WAV files under `.test-output` |
+| `python scripts/inspect-fixtures.py` | RIFF sizes/indexes valid; 16 video frames, 320 × 180, 1.6 seconds; WAV is 2 seconds of mono 16 kHz silence |
+| `scripts/package.ps1 -Offline` | Optimized Windows x64 executable built with static CRT; no GUI launch; license and font notices generated |
+| `python scripts/inspect-package.py` | x64 PE, Windows GUI subsystem, matching SHA-256, no dynamic MSVC/UCRT DLL imports; license/font notices present |
+| Live hardware/UI/update install | Not run, per explicit user instruction |
+
+No FFmpeg/ffprobe is installed in the available toolchain, so independent-player decoding remains a manual check. Tests decode JPEG frame data using the image library; the Python parser independently checks the container. The generated checksum accompanies the exact EXE in `dist/SHA256SUMS.txt`; these ignored build artifacts are local handoff files, not a published release.
+
+Final local asset: `ScreenRecorder-v0.1.0.exe`, 9,788,928 bytes. SHA-256: `8372a5bb0a36a754cab6ba9d054ff2e41644290650b12f3d36a601fc87a42636`. The read-only PE inspection found OS/OpenGL imports and no dynamic MSVC/UCRT imports. This is evidence about the packaged file, not a successful launch or clean-machine compatibility test.
 
 ## Deferred manual validation before publication
 

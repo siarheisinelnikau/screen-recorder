@@ -21,6 +21,7 @@ try {
     [IO.File]::WriteAllText((Join-Path $taskDist 'SHA256SUMS.txt'), "$taskHash  $taskAsset`n", [Text.Encoding]::ASCII)
     Write-Output "Packaged $taskOutput"
     Write-Output "SHA-256 $taskHash"
+    & (Join-Path $PSScriptRoot 'notices.ps1') -Offline:$Offline
 } finally {
     $env:CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_RUSTFLAGS = $taskOldFlags
     Pop-Location
