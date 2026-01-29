@@ -97,7 +97,7 @@ fn agent(timeout: u64) -> ureq::Agent {
         .into()
 }
 pub fn check() -> Result<Option<Update>> {
-    let mut response=agent(20).get(API).header("User-Agent","ScreenRecorder/0.1.0")
+    let mut response=agent(20).get(API).header("User-Agent",concat!("ScreenRecorder/",env!("CARGO_PKG_VERSION")))
         .header("Accept","application/vnd.github+json").call()
         .context("Update check unavailable: network, rate limit, or repository/release not yet published")?;
     let release: Release = response

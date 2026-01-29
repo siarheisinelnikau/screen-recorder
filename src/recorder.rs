@@ -3,7 +3,7 @@ use anyhow::Result;
 use std::{
     path::Path,
     sync::{
-        Arc,
+        Arc, Mutex,
         atomic::{AtomicBool, Ordering},
         mpsc::{self, Receiver, SyncSender},
     },
@@ -14,6 +14,7 @@ use std::{
 pub struct Control {
     stop: AtomicBool,
     paused: AtomicBool,
+    timeline: Mutex<Option<crate::timeline::Timeline>>,
     wake: Option<SyncSender<()>>,
 }
 impl Control {
@@ -28,15 +29,44 @@ impl Control {
         )
     }
     pub fn stop(&self) {
+        if let Some(timeline) = self.timeline.lock().unwrap().as_mut() {
+            timeline.stop(crate::timeline::now());
+        }
         self.stop.store(true, Ordering::Relaxed);
         self.wake();
     }
     pub fn pause(&self, paused: bool) {
+        if let Some(timeline) = self.timeline.lock().unwrap().as_mut() {
+            timeline.pause(crate::timeline::now(), paused);
+        }
         self.paused.store(paused, Ordering::Relaxed);
         self.wake();
     }
     pub fn is_paused(&self) -> bool {
         self.paused.load(Ordering::Relaxed)
+    }
+    pub fn is_stopped(&self) -> bool {
+        self.stop.load(Ordering::Relaxed)
+    }
+    fn begin(&self) {
+        *self.timeline.lock().unwrap() = Some(crate::timeline::Timeline::new(
+            crate::timeline::now(),
+            self.is_paused(),
+        ));
+    }
+    pub fn elapsed(&self, at: u64) -> u64 {
+        self.timeline
+            .lock()
+            .unwrap()
+            .as_ref()
+            .map_or(0, |t| t.elapsed(at))
+    }
+    pub fn spans(&self, begin: u64, end: u64) -> Vec<crate::timeline::Span> {
+        self.timeline
+            .lock()
+            .unwrap()
+            .as_ref()
+            .map_or_else(Vec::new, |t| t.spans(begin, end))
     }
     fn wake(&self) {
         if let Some(tx) = &self.wake {
@@ -53,12 +83,71 @@ pub fn record(
     wake: &Receiver<()>,
     progress: impl Fn(u64, f64),
 ) -> Result<()> {
+    record_impl(source, path, fps, control, wake, progress, || Ok(()))
+}
+
+#[cfg(windows)]
+pub fn record_with_audio(
+    source: &mut impl FrameSource,
+    path: &Path,
+    fps: u32,
+    control: &Arc<Control>,
+    wake: &Receiver<()>,
+    options: crate::audio::Options,
+    progress: impl Fn(u64, f64),
+) -> Result<()> {
+    anyhow::ensure!(
+        !path.exists(),
+        "Recording destination already exists; choose a new filename"
+    );
+    for kind in [crate::audio::Kind::Microphone, crate::audio::Kind::System] {
+        anyhow::ensure!(
+            !kind.path(path).exists(),
+            "An audio sidecar already exists; choose a new recording filename"
+        );
+    }
+    let mut audio = if options.enabled() {
+        Some(crate::audio::Session::prepare(
+            path,
+            options,
+            control.clone(),
+        )?)
+    } else {
+        None
+    };
+    let result = record_impl(source, path, fps, control, wake, progress, || {
+        if let Some(session) = audio.as_mut() {
+            session.start()?;
+        }
+        Ok(())
+    });
+    control.stop();
+    let audio_result = audio.map_or(Ok(()), |s| s.finish());
+    match (result, audio_result) {
+        (Err(e), Err(a)) => Err(e.context(format!("Audio also stopped: {a:#}"))),
+        (Err(e), _) => Err(e),
+        (_, result) => result,
+    }
+}
+
+fn record_impl(
+    source: &mut impl FrameSource,
+    path: &Path,
+    fps: u32,
+    control: &Control,
+    wake: &Receiver<()>,
+    progress: impl Fn(u64, f64),
+    start_audio: impl FnOnce() -> Result<()>,
+) -> Result<()> {
     let (width, height) = source.dimensions();
     let mut writer = ProjectWriter::create(path, width, height, fps)?;
+    control.begin();
     let result = (|| -> Result<()> {
+        if !control.is_stopped() {
+            start_audio()?;
+        }
         let interval = Duration::from_secs_f64(1.0 / fps as f64);
         let start = Instant::now();
-        let mut paused = Duration::ZERO;
         let mut deadline = start;
         let mut frames = 0;
         let mut last_status = start;
@@ -67,7 +156,6 @@ pub fn record(
                 break;
             }
             if control.is_paused() {
-                let pause_start = Instant::now();
                 while control.is_paused() && !control.stop.load(Ordering::Relaxed) {
                     if source.stop_shortcut() {
                         control.stop();
@@ -80,7 +168,6 @@ pub fn record(
                         return Ok(());
                     }
                 }
-                paused += pause_start.elapsed();
                 deadline = Instant::now();
                 continue;
             }
@@ -89,7 +176,7 @@ pub fn record(
                 let _ = wake.recv_timeout(deadline - now);
                 continue;
             }
-            let timestamp = now.duration_since(start).saturating_sub(paused).as_micros() as u64;
+            let timestamp = control.elapsed(crate::timeline::now()) / 10;
             let (frame, cursor) = source.sample()?;
             writer.append(&frame, timestamp, cursor)?;
             frames += 1;
@@ -104,6 +191,7 @@ pub fn record(
         }
         Ok(())
     })();
+    control.stop();
     // Even a source/disk failure attempts to flush every completed frame.
     let finalization = writer.finish();
     result.and(finalization)
