@@ -39,6 +39,7 @@ pub struct Project {
     pub fps: u32,
     pub frames: Vec<FrameIndex>,
     pub recovered_tail: bool,
+    pub audio_tracks: Vec<crate::audio::Track>,
 }
 
 pub fn validate_dimensions(width: u32, height: u32, fps: u32) -> Result<()> {
@@ -225,6 +226,8 @@ impl Project {
         if frames.is_empty() {
             bail!("Recording contains no complete frames");
         }
+        let audio_tracks = crate::audio::discover(path)?;
+        recovered_tail |= audio_tracks.iter().any(|t| t.recovered_tail);
         Ok(Self {
             path: path.to_path_buf(),
             width,
@@ -232,6 +235,7 @@ impl Project {
             fps,
             frames,
             recovered_tail,
+            audio_tracks,
         })
     }
 

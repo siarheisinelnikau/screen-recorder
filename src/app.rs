@@ -56,6 +56,7 @@ pub struct RecorderApp {
     recording_name: String,
     open_path: String,
     export_path: String,
+    export_mp4: bool,
     project: Option<Arc<Project>>,
     edit: Option<Edit>,
     playhead: f64,
@@ -149,6 +150,7 @@ impl RecorderApp {
             recording_name: recording_name(),
             open_path: String::new(),
             export_path: String::new(),
+            export_mp4: true,
             project: None,
             edit: None,
             playhead: 0.0,
@@ -229,6 +231,10 @@ impl RecorderApp {
         }
         let path = folder.join(name);
         let fps = self.settings.fps;
+        let audio = screen_recorder::audio::Options {
+            microphone: self.settings.microphone,
+            system: self.settings.system_audio,
+        };
         let (control, wake) = Control::channel();
         self.control = Some(control.clone());
         self.busy = Busy::Recording;
@@ -241,12 +247,13 @@ impl RecorderApp {
                 #[cfg(windows)]
                 {
                     let mut source = capture::Source::new(target, fps)?;
-                    recorder::record(
+                    recorder::record_with_audio(
                         &mut source,
                         &path,
                         fps,
                         &control,
                         &wake,
+                        audio,
                         |frames, seconds| {
                             progress(
                                 &tx,
@@ -260,7 +267,7 @@ impl RecorderApp {
                 }
                 #[cfg(not(windows))]
                 {
-                    let _ = (target, fps, control, wake);
+                    let _ = (target, fps, control, wake, audio);
                     anyhow::bail!("Capture is available on Windows only");
                 }
                 Ok(())
@@ -322,8 +329,8 @@ impl RecorderApp {
             return;
         };
         let path = PathBuf::from(self.export_path.trim());
-        if path.extension().is_none_or(|x| x != "avi") || !path.is_absolute() {
-            self.error = Some("Export destination must be an absolute .avi path".into());
+        if path.extension().is_none_or(|x| x != "avi" && x != "mp4") || !path.is_absolute() {
+            self.error = Some("Export destination must be an absolute .mp4 or .avi path".into());
             return;
         }
         self.busy = Busy::Export;
@@ -331,15 +338,33 @@ impl RecorderApp {
         self.cancel.store(false, Ordering::Relaxed);
         let cancel = self.cancel.clone();
         let (tx, ctx) = (self.tx.clone(), ctx.clone());
-        self.status = "Exporting AVI…".into();
+        self.status = "Exporting video…".into();
         self.worker = Some(std::thread::spawn(move || {
             let last = std::cell::Cell::new(std::time::Instant::now());
-            let work = editor::export(&project, &edit, &path, &cancel, |value| {
+            let report = |value| {
                 if last.get().elapsed().as_millis() >= 250 || value >= 1.0 {
-                    progress(&tx, &ctx, format!("Exporting AVI · {:.0}%", value * 100.0));
+                    progress(
+                        &tx,
+                        &ctx,
+                        format!("Exporting video · {:.0}%", value * 100.0),
+                    );
                     last.set(std::time::Instant::now());
                 }
-            });
+            };
+            let work = if path.extension().is_some_and(|x| x == "mp4") {
+                #[cfg(windows)]
+                {
+                    screen_recorder::mp4::export(&project, &edit, &path, &cancel, report)
+                }
+                #[cfg(not(windows))]
+                {
+                    Err(anyhow::anyhow!(
+                        "MP4 export requires Windows Media Foundation"
+                    ))
+                }
+            } else {
+                editor::export(&project, &edit, &path, &cancel, report)
+            };
             send(&tx, &ctx, Event::Exported(result(work)));
         }));
     }
@@ -405,7 +430,7 @@ impl RecorderApp {
                             self.export_path = project
                                 .path
                                 .with_file_name(format!(
-                                    "{}-edited.avi",
+                                    "{}-edited.mp4",
                                     project
                                         .path
                                         .file_stem()
@@ -425,6 +450,7 @@ impl RecorderApp {
                                 )
                             };
                             self.project = Some(project);
+                            self.export_mp4 = true;
                             self.edit = Some(edit);
                             self.playhead = 0.0;
                             self.preview = None;
@@ -473,7 +499,7 @@ impl RecorderApp {
                 Event::Exported(value) => {
                     self.busy = Busy::Idle;
                     match value {
-                        Ok(()) => self.status = format!("AVI exported: {}", self.export_path),
+                        Ok(()) => self.status = format!("Video exported: {}", self.export_path),
                         Err(e) => self.error = Some(e),
                     }
                 }
@@ -582,11 +608,10 @@ impl RecorderApp {
                 ui.horizontal(|ui| {ui.label("Filename");ui.text_edit_singleline(&mut self.recording_name);
                     ui.label("FPS");ui.add(egui::DragValue::new(&mut self.settings.fps).range(5..=30));});
                 ui.horizontal(|ui| {
-                    let mut disabled=false;
-                    ui.add_enabled(false,egui::Checkbox::new(&mut disabled,"Microphone (unavailable)"));
-                    ui.add_enabled(false,egui::Checkbox::new(&mut disabled,"System audio (unavailable)"));
+                    ui.checkbox(&mut self.settings.microphone,"Default microphone");
+                    ui.checkbox(&mut self.settings.system_audio,"Default system output (all apps)");
                 });
-                ui.small("Version 0.1 records silent video. No audio devices are opened. Sources are limited to 4096 × 2160.");
+                ui.small("Audio endpoints open only after Start. Microphone access must already be allowed in Windows. Capture: up to 4096 × 2160.");
             });
         });
         ui.add_space(6.0);
@@ -689,6 +714,11 @@ impl RecorderApp {
                 changed|=ui.checkbox(&mut edit.clicks,"Emphasize clicks").changed();
                 changed|=ui.checkbox(&mut edit.automatic_zoom,"Automatic zoom around clicks").changed();
                 ui.small("Automatic zoom uses 1.8× with smooth entry and exit. Manual segments override it.");
+                ui.separator();ui.strong(format!("Audio · {} captured track(s)",project.audio_tracks.len()));
+                ui.checkbox(&mut edit.include_audio,"Include audio in MP4");
+                ui.add(egui::Slider::new(&mut edit.microphone_gain,0.0..=2.0).text("Microphone gain"));
+                ui.add(egui::Slider::new(&mut edit.system_gain,0.0..=2.0).text("System gain"));
+                ui.small("Audio follows trim and pause timing. Preview does not play sound. Two tracks mix at half gain each.");
                 if ui.button("Add zoom at playhead").clicked() && self.playhead<project.duration() && edit.zooms.len()<2000 {
                     let cursor=project.frames[project.index_at(self.playhead)].cursor;
                     edit.zooms.push(Zoom{start:self.playhead,end:(self.playhead+2.0).min(project.duration()),x:cursor.x,y:cursor.y,scale:1.8});changed=true;
@@ -726,7 +756,20 @@ impl RecorderApp {
             }
             ui.small("Trim and zoom decisions are saved separately as .edit.json.");
         });
-        ui.label("AVI output (new file only)");
+        ui.horizontal(|ui| {
+            ui.label("Output (new file only)");
+            let old = self.export_mp4;
+            ui.add_enabled_ui(can_edit, |ui| {
+                ui.radio_value(&mut self.export_mp4, true, "MP4 · H.264 + AAC");
+                ui.radio_value(&mut self.export_mp4, false, "AVI · silent MJPEG");
+            });
+            if old != self.export_mp4 {
+                self.export_path = PathBuf::from(&self.export_path)
+                    .with_extension(if self.export_mp4 { "mp4" } else { "avi" })
+                    .to_string_lossy()
+                    .into_owned();
+            }
+        });
         ui.add_enabled(
             can_edit,
             egui::TextEdit::singleline(&mut self.export_path).desired_width(f32::INFINITY),
@@ -734,7 +777,7 @@ impl RecorderApp {
         self.edit = Some(edit);
         ui.horizontal(|ui| {
             if ui
-                .add_enabled(self.can_start(), egui::Button::new("Export edited AVI"))
+                .add_enabled(self.can_start(), egui::Button::new("Export edited video"))
                 .clicked()
             {
                 self.start_export(ui.ctx());
@@ -742,7 +785,7 @@ impl RecorderApp {
             if self.busy == Busy::Export && ui.button("Cancel export").clicked() {
                 self.cancel.store(true, Ordering::Relaxed);
             }
-            ui.small("Motion JPEG · silent · original resolution · 2 GB per export");
+            ui.small("MP4 uses Windows H.264/AAC. Odd dimensions pad to even pixels. AVI is silent and limited to 2 GB.");
         });
         if changed {
             self.mark_preview(ui.ctx());
@@ -790,7 +833,7 @@ impl RecorderApp {
         ui.small(format!("Settings: {}", self.settings_path.display()));
         ui.separator();
         ui.strong("This first version");
-        ui.label("GDI visible-area capture. Silent .srec projects and Motion JPEG AVI exports. No MP4, audio, webcam, hidden-window capture or protected content support.");
+        ui.label("GDI visible-area capture; WASAPI microphone and system loopback; Media Foundation MP4/H.264/AAC or silent Motion JPEG AVI. No webcam, hidden-window or protected-content capture.");
         ui.label("Capture, hardware compatibility, real UI screenshots and update replacement require manual validation before a public release.");
     }
 }

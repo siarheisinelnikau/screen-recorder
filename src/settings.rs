@@ -11,6 +11,8 @@ pub struct Settings {
     pub startup_updates: bool,
     pub output_folder: String,
     pub fps: u32,
+    pub microphone: bool,
+    pub system_audio: bool,
 }
 impl Default for Settings {
     fn default() -> Self {
@@ -18,6 +20,8 @@ impl Default for Settings {
             startup_updates: true,
             output_folder: String::new(),
             fps: 15,
+            microphone: false,
+            system_audio: false,
         }
     }
 }

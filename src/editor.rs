@@ -32,6 +32,18 @@ pub struct Edit {
     pub show_cursor: bool,
     pub automatic_zoom: bool,
     pub zooms: Vec<Zoom>,
+    #[serde(default = "enabled")]
+    pub include_audio: bool,
+    #[serde(default = "unity")]
+    pub microphone_gain: f32,
+    #[serde(default = "unity")]
+    pub system_gain: f32,
+}
+fn enabled() -> bool {
+    true
+}
+fn unity() -> f32 {
+    1.0
 }
 
 impl Edit {
@@ -44,9 +56,18 @@ impl Edit {
             show_cursor: true,
             automatic_zoom: true,
             zooms: Vec::new(),
+            include_audio: true,
+            microphone_gain: 1.0,
+            system_gain: 1.0,
         }
     }
     pub fn validate(&self, project: &Project) -> Result<()> {
+        ensure!(
+            [self.microphone_gain, self.system_gain]
+                .iter()
+                .all(|g| g.is_finite() && (0.0..=2.0).contains(g)),
+            "Audio gains must be between 0 and 2"
+        );
         ensure!(
             self.trim_start.is_finite()
                 && self.trim_end.is_finite()
@@ -337,7 +358,7 @@ pub fn export(
     result
 }
 
-fn publish_new(partial: &Path, output: &Path) -> Result<()> {
+pub(crate) fn publish_new(partial: &Path, output: &Path) -> Result<()> {
     #[cfg(windows)]
     {
         use std::os::windows::ffi::OsStrExt;
@@ -349,7 +370,7 @@ fn publish_new(partial: &Path, output: &Path) -> Result<()> {
         } == 0
         {
             return Err(std::io::Error::last_os_error())
-                .context("Cannot publish AVI; choose a new writable destination");
+                .context("Cannot publish export; choose a new writable destination");
         }
     }
     #[cfg(not(windows))]
