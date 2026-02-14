@@ -15,7 +15,7 @@ jobs:
           components: rustfmt, clippy
       - name: Safe synthetic checks
         shell: pwsh
-        run: ./scripts/verify.ps1
+        run: ./scripts/verify.ps1 -NativeMedia
       - name: Package standalone executable
         shell: pwsh
         run: ./scripts/package.ps1

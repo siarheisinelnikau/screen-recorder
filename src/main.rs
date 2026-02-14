@@ -1,6 +1,7 @@
 #![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
 
 mod app;
+mod theme;
 
 fn main() -> eframe::Result {
     if screen_recorder::updater::run_install_helper() {

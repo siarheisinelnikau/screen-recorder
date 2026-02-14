@@ -1,4 +1,5 @@
-use eframe::egui::{self, Color32, RichText};
+use crate::theme;
+use eframe::egui::{self, RichText};
 use screen_recorder::{
     capture::{self, Target},
     editor::{self, Edit, Zoom},
@@ -104,13 +105,7 @@ fn recording_name() -> String {
 impl RecorderApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         let ctx = &cc.egui_ctx;
-        ctx.set_visuals(egui::Visuals::dark());
-        ctx.style_mut_of(egui::Theme::Dark, |s| {
-            s.spacing.item_spacing = egui::vec2(10.0, 10.0);
-            s.spacing.button_padding = egui::vec2(14.0, 9.0);
-            s.visuals.selection.bg_fill = Color32::from_rgb(28, 111, 119);
-            s.visuals.panel_fill = Color32::from_rgb(19, 25, 33);
-        });
+        theme::apply(ctx);
         let settings_path = settings::directory().join("settings.json");
         let (mut settings, error) = match Settings::load(&settings_path) {
             Ok(s) => (s, None),
@@ -329,8 +324,11 @@ impl RecorderApp {
             return;
         };
         let path = PathBuf::from(self.export_path.trim());
-        if path.extension().is_none_or(|x| x != "avi" && x != "mp4") || !path.is_absolute() {
-            self.error = Some("Export destination must be an absolute .mp4 or .avi path".into());
+        let extension = if self.export_mp4 { "mp4" } else { "avi" };
+        if path.extension().is_none_or(|x| x != extension) || !path.is_absolute() {
+            self.error = Some(format!(
+                "Choose an absolute .{extension} path for the selected export format"
+            ));
             return;
         }
         self.busy = Busy::Export;
@@ -597,21 +595,39 @@ impl RecorderApp {
                             }
                         });
                 }
-                ui.small("Window mode follows its visible rectangle. Keep it unoccluded and do not resize or minimize it.");
+                if self.source_mode==1{ui.small("Keep this window visible and unoccluded. Resizing or minimizing stops recording.");}
             });
         });
-        egui::Frame::group(ui.style()).show(ui,|ui| {
-            ui.strong("02   Recording destination");
-            ui.add_enabled_ui(editable,|ui| {
-                ui.label("Output folder (created when you start recording)");
-                ui.add(egui::TextEdit::singleline(&mut self.settings.output_folder).desired_width(f32::INFINITY));
-                ui.horizontal(|ui| {ui.label("Filename");ui.text_edit_singleline(&mut self.recording_name);
-                    ui.label("FPS");ui.add(egui::DragValue::new(&mut self.settings.fps).range(5..=30));});
-                ui.horizontal(|ui| {
-                    ui.checkbox(&mut self.settings.microphone,"Default microphone");
-                    ui.checkbox(&mut self.settings.system_audio,"Default system output (all apps)");
+        ui.add_space(8.0);
+        ui.strong("02   Sound");
+        ui.add_enabled_ui(editable, |ui| {
+            ui.horizontal_wrapped(|ui| {
+                ui.checkbox(&mut self.settings.microphone, "Microphone")
+                    .on_hover_text("Record the default Windows microphone after Start");
+                ui.checkbox(&mut self.settings.system_audio, "System sound")
+                    .on_hover_text("Record everything playing on the default Windows output");
+            });
+            ui.small(if self.settings.microphone || self.settings.system_audio {
+                "Uses your default Windows devices. Nothing is recorded until Start."
+            } else {
+                "Both off: this recording will be silent."
+            });
+        });
+        ui.separator();
+        ui.strong("03   Save recording");
+        ui.add_enabled_ui(editable, |ui| {
+            ui.label("Output folder");
+            ui.add(
+                egui::TextEdit::singleline(&mut self.settings.output_folder)
+                    .desired_width(f32::INFINITY),
+            );
+            ui.collapsing("Filename and frame rate", |ui| {
+                ui.horizontal_wrapped(|ui| {
+                    ui.label("Filename");
+                    ui.text_edit_singleline(&mut self.recording_name);
+                    ui.label("FPS");
+                    ui.add(egui::DragValue::new(&mut self.settings.fps).range(5..=30));
                 });
-                ui.small("Audio endpoints open only after Start. Microphone access must already be allowed in Windows. Capture: up to 4096 × 2160.");
             });
         });
         ui.add_space(6.0);
@@ -620,7 +636,7 @@ impl RecorderApp {
                 .add_enabled(
                     editable,
                     egui::Button::new(RichText::new("●  Start recording").strong())
-                        .fill(Color32::from_rgb(25, 106, 115)),
+                        .fill(theme::PRIMARY),
                 )
                 .clicked()
             {
@@ -635,18 +651,6 @@ impl RecorderApp {
                     control.stop();
                     self.status = "Finalizing recording…".into();
                 }
-                ui.colored_label(
-                    if paused {
-                        Color32::YELLOW
-                    } else {
-                        Color32::LIGHT_RED
-                    },
-                    if paused {
-                        "● PAUSED"
-                    } else {
-                        "● RECORDING"
-                    },
-                );
             }
         });
         ui.small("Ctrl+Shift+F10 stops an active recording. No background cursor tracking runs before Start or while paused.");
@@ -714,11 +718,20 @@ impl RecorderApp {
                 changed|=ui.checkbox(&mut edit.clicks,"Emphasize clicks").changed();
                 changed|=ui.checkbox(&mut edit.automatic_zoom,"Automatic zoom around clicks").changed();
                 ui.small("Automatic zoom uses 1.8× with smooth entry and exit. Manual segments override it.");
-                ui.separator();ui.strong(format!("Audio · {} captured track(s)",project.audio_tracks.len()));
-                ui.checkbox(&mut edit.include_audio,"Include audio in MP4");
-                ui.add(egui::Slider::new(&mut edit.microphone_gain,0.0..=2.0).text("Microphone gain"));
-                ui.add(egui::Slider::new(&mut edit.system_gain,0.0..=2.0).text("System gain"));
-                ui.small("Audio follows trim and pause timing. Preview does not play sound. Two tracks mix at half gain each.");
+                ui.separator();ui.strong("Sound");
+                if !self.export_mp4{ui.small("AVI exports are silent. Choose MP4 below to include sound.");}
+                else if project.audio_tracks.is_empty(){ui.small("This recording has no audio tracks.");}
+                else{
+                    ui.checkbox(&mut edit.include_audio,"Include recorded sound");
+                    if edit.include_audio{ui.collapsing("Adjust mix",|ui|{
+                        for track in &project.audio_tracks{match track.kind{
+                            screen_recorder::audio::Kind::Microphone=>{ui.add(egui::Slider::new(&mut edit.microphone_gain,0.0..=2.0).text("Microphone"));},
+                            screen_recorder::audio::Kind::System=>{ui.add(egui::Slider::new(&mut edit.system_gain,0.0..=2.0).text("System sound"));},
+                        }}
+                        ui.small("Two tracks mix at half gain each. Preview does not play sound.");
+                    });}
+                }
+                ui.collapsing("Manual zoom adjustments",|ui|{
                 if ui.button("Add zoom at playhead").clicked() && self.playhead<project.duration() && edit.zooms.len()<2000 {
                     let cursor=project.frames[project.index_at(self.playhead)].cursor;
                     edit.zooms.push(Zoom{start:self.playhead,end:(self.playhead+2.0).min(project.duration()),x:cursor.x,y:cursor.y,scale:1.8});changed=true;
@@ -740,6 +753,7 @@ impl RecorderApp {
                         });
                     }
                     if let Some(index)=remove {edit.zooms.remove(index);changed=true;}
+                });
                 });
             });
         });
@@ -777,7 +791,7 @@ impl RecorderApp {
         self.edit = Some(edit);
         ui.horizontal(|ui| {
             if ui
-                .add_enabled(self.can_start(), egui::Button::new("Export edited video"))
+                .add_enabled(self.can_start(), egui::Button::new("Export video").fill(theme::PRIMARY))
                 .clicked()
             {
                 self.start_export(ui.ctx());
@@ -809,7 +823,7 @@ impl RecorderApp {
             if ui.add_enabled(!self.update_busy,egui::Button::new("Check for updates")).clicked() {self.check_updates(ui.ctx());}
             ui.label(&self.update_message);
             if let Some(update)=&self.update {
-                ui.colored_label(Color32::LIGHT_GREEN,format!("Available: {}",update.version));
+                ui.colored_label(theme::SUCCESS,format!("Available: {}",update.version));
                 if ui.add_enabled(self.can_start() && !self.update_busy,egui::Button::new("Download and install (restarts app)")).clicked() {self.install_update(ui.ctx());}
             }
             if self.installing && ui.button("Cancel download").clicked() {self.cancel.store(true,Ordering::Relaxed);}
@@ -824,6 +838,14 @@ impl RecorderApp {
             ui.label("Frames per second");
             ui.add(egui::DragValue::new(&mut self.settings.fps).range(5..=30));
         });
+        ui.checkbox(
+            &mut self.settings.microphone,
+            "Microphone on for new recordings",
+        );
+        ui.checkbox(
+            &mut self.settings.system_audio,
+            "System sound on for new recordings",
+        );
         if ui.button("Save defaults").clicked() {
             match self.settings.save(&self.settings_path) {
                 Ok(()) => self.status = "Defaults saved".into(),
@@ -832,7 +854,7 @@ impl RecorderApp {
         }
         ui.small(format!("Settings: {}", self.settings_path.display()));
         ui.separator();
-        ui.strong("This first version");
+        ui.strong("Recording support");
         ui.label("GDI visible-area capture; WASAPI microphone and system loopback; Media Foundation MP4/H.264/AAC or silent Motion JPEG AVI. No webcam, hidden-window or protected-content capture.");
         ui.label("Capture, hardware compatibility, real UI screenshots and update replacement require manual validation before a public release.");
     }
@@ -860,7 +882,7 @@ impl eframe::App for RecorderApp {
                     RichText::new("SCREEN / RECORDER")
                         .size(23.0)
                         .strong()
-                        .color(Color32::from_rgb(122, 222, 216)),
+                        .color(theme::ACCENT),
                 );
                 ui.add_space(22.0);
                 ui.selectable_value(&mut self.tab, Tab::Record, "Record");
@@ -869,11 +891,7 @@ impl eframe::App for RecorderApp {
                 if let Some(control) = &self.control {
                     let paused = control.is_paused();
                     ui.colored_label(
-                        if paused {
-                            Color32::YELLOW
-                        } else {
-                            Color32::LIGHT_RED
-                        },
+                        if paused { theme::WARNING } else { theme::ERROR },
                         if paused {
                             "● PAUSED"
                         } else {
@@ -885,7 +903,7 @@ impl eframe::App for RecorderApp {
                     }
                 }
                 if self.update.is_some() {
-                    ui.colored_label(Color32::LIGHT_GREEN, "Update available");
+                    ui.colored_label(theme::SUCCESS, "Update available");
                 }
             });
             ui.separator();
@@ -902,7 +920,7 @@ impl eframe::App for RecorderApp {
                     ui.label(&self.status);
                     if let Some(error) = self.error.clone() {
                         egui::Frame::group(ui.style()).show(ui, |ui| {
-                            ui.colored_label(Color32::LIGHT_RED, error);
+                            ui.colored_label(theme::ERROR, error);
                             if ui.small_button("Dismiss").clicked() {
                                 self.error = None;
                             }

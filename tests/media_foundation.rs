@@ -42,7 +42,12 @@ impl Drop for Runtime {
 fn decode(path: &Path, audio: bool) -> Result<(usize, i64)> {
     let _runtime = Runtime::new()?;
     unsafe {
-        let reader = MFCreateSourceReaderFromURL(&HSTRING::from(path.as_os_str()), None)?;
+        let mut attributes = None;
+        MFCreateAttributes(&mut attributes, 2)?;
+        let attributes = attributes.unwrap();
+        attributes.SetUINT32(&MF_SOURCE_READER_DISABLE_DXVA, 1)?;
+        attributes.SetUINT32(&MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS, 0)?;
+        let reader = MFCreateSourceReaderFromURL(&HSTRING::from(path.as_os_str()), &attributes)?;
         reader.SetStreamSelection(MF_SOURCE_READER_ALL_STREAMS.0 as u32, false)?;
         let stream = if audio {
             MF_SOURCE_READER_FIRST_AUDIO_STREAM.0
@@ -196,7 +201,7 @@ fn h264_aac_round_trip_trim_cancel_and_existing_files() -> Result<()> {
         "Muted export unexpectedly has AAC"
     );
     eprintln!(
-        "Synthetic Media Foundation round trip: {video_frames} H.264 frames, {audio_samples} decoded silent AAC samples, video end {video_end}, audio end {audio_end}; odd size padded to 128x72"
+        "Synthetic Media Foundation round trip: {video_frames} H.264 frames, {audio_samples} decoded silent AAC buffers, video end {video_end}, audio end {audio_end}; odd size padded to 128x72"
     );
     Ok(())
 }
