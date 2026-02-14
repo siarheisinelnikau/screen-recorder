@@ -1,0 +1,13 @@
+# Consumer workflow and review status
+
+The user wants a readable tutorial, with optional narration/system sound and a shareable video. The normal path is **choose source → choose sound → Start → trim/focus → Export**. The existing Record/Edit/Settings navigation is retained because sustained editing needs a real window; this is not a background-only utility suited to a tray menu. No new tray surface or theme editor is added.
+
+The 0.2 source revision separates sound choices from storage fields. Microphone and System sound are explicit opt-ins with a clear silent state. The generated filename and existing frame-rate default remove mandatory decisions; overrides live under Filename and frame rate. Source-specific cautions appear only for the relevant mode. Record/paused state remains visible in the header while navigating.
+
+MP4 is the default export. AVI is explicitly labeled silent. Audio settings appear only when they can affect the export, and gain controls only for recorded tracks under Adjust mix. Manual zoom timing/focus lives in a collapsed specialist area; automatic zoom remains one checkbox. The selected format and output extension must agree. These changes preserve the existing media/settings formats and all editing capabilities.
+
+`src/theme.rs` supplies reusable background/surface/text/border/accent/status roles, a 22/15/13 point type scale and an 8 point spacing rhythm. Teal marks the primary action; amber/red/green have stable status meanings accompanied by text. The palette is source-defined; it has not been visually approved from a rendered screenshot.
+
+Applied skills: `product-design`, `rust-performance` (including its pre-computer-use gate), and `github-release-conventions`. The current instruction prohibits both GUI launches and computer use. Therefore no live visual review, self-capture, screenshot, DPI/keyboard/accessibility test, idle/hidden measurement or backend runtime verification has been performed. README screenshots remain pending rather than fabricated. Compilation does not establish visual quality or pass the rendering/load gate.
+
+Before a future authorized visual review: inspect the exact packaged renderer/scheduling, use an isolated bounded diagnostic launch with frame/CPU measurements, and prefer finite application-generated Record/Edit/Settings captures. Inspect those actual PNGs for clipping, contrast, focus, long source/path names, collapsed/expanded sections and 100–200% scaling. Verify idle and minimized windows stop rendering separately. The existing OpenGL presenter is documented, not relabeled as CPU rendering.

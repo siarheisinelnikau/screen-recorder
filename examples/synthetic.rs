@@ -2,6 +2,7 @@
 use anyhow::{Result, ensure};
 use image::{Rgb, RgbImage};
 use screen_recorder::{
+    audio::{Kind, Packet, TrackWriter},
     editor::{self, Edit},
     project::{Cursor, Project, ProjectWriter},
 };
@@ -43,6 +44,17 @@ fn main() -> Result<()> {
         )?;
     }
     writer.finish()?;
+    // Two synthetic silent tracks exercise mixing/AAC without opening endpoints.
+    for kind in [Kind::Microphone, Kind::System] {
+        let mut audio = TrackWriter::create(&kind.path(&path))?;
+        for i in 0..2 {
+            audio.append(&Packet {
+                start: i * 48_000,
+                samples: vec![[0.0; 2]; 48_000],
+            })?;
+        }
+        audio.finish()?;
+    }
     let project = Project::open(&path)?;
     let mut edit = Edit::new(&project);
     edit.trim_start = 0.2;
@@ -55,7 +67,15 @@ fn main() -> Result<()> {
         &AtomicBool::new(false),
         |_| {},
     )?;
-    // Silent PCM WAV is a fixture only. The recorder and AVI exporter have no audio stream.
+    #[cfg(windows)]
+    screen_recorder::mp4::export(
+        &project,
+        &edit,
+        &root.join("tutorial-edited.mp4"),
+        &AtomicBool::new(false),
+        |_| {},
+    )?;
+    // Standalone silence is also kept as a PCM WAV fixture; AVI remains video-only.
     let samples = 32_000u32;
     let mut wav = OpenOptions::new()
         .write(true)
