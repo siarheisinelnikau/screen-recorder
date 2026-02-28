@@ -70,6 +70,14 @@ impl Settings {
 mod tests {
     use super::*;
     #[test]
+    fn legacy_settings_do_not_enable_audio() -> Result<()> {
+        let settings: Settings =
+            serde_json::from_str(r#"{"startup_updates":false,"output_folder":"","fps":15}"#)?;
+        assert!(!settings.microphone && !settings.system_audio);
+        assert!(!settings.startup_updates);
+        Ok(())
+    }
+    #[test]
     fn startup_opt_out_survives_restart() -> Result<()> {
         let dir = crate::test_directory()?;
         let path = dir.path().join("settings.json");

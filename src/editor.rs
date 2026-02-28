@@ -385,6 +385,16 @@ pub(crate) fn publish_new(partial: &Path, output: &Path) -> Result<()> {
 mod tests {
     use super::*;
     #[test]
+    fn legacy_video_only_edit_files_remain_readable() -> Result<()> {
+        let edit: Edit = serde_json::from_str(
+            r#"{"trim_start":0.0,"trim_end":1.0,"highlight":true,"clicks":true,"show_cursor":true,"automatic_zoom":true,"zooms":[]}"#,
+        )?;
+        assert!(edit.include_audio);
+        assert_eq!(edit.microphone_gain, 1.0);
+        assert_eq!(edit.system_gain, 1.0);
+        Ok(())
+    }
+    #[test]
     fn camera_is_continuous_and_manual_segments_override_auto() {
         let z = Zoom {
             start: 1.0,

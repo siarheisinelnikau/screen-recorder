@@ -277,6 +277,31 @@ impl Project {
 mod tests {
     use super::*;
     #[test]
+    fn discovers_audio_sidecars_and_reports_incomplete_tail() -> Result<()> {
+        let dir = crate::test_directory()?;
+        let path = dir.path().join("with-audio.srec");
+        let mut writer = ProjectWriter::create(&path, 64, 64, 10)?;
+        writer.append(&RgbImage::new(64, 64), 0, Cursor::default())?;
+        writer.finish()?;
+        let audio_path = crate::audio::Kind::Microphone.path(&path);
+        let mut audio = crate::audio::TrackWriter::create(&audio_path)?;
+        audio.append(&crate::audio::Packet {
+            start: 0,
+            samples: vec![[0.0; 2]; 480],
+        })?;
+        audio.finish()?;
+        OpenOptions::new()
+            .append(true)
+            .open(&audio_path)?
+            .write_all(&[1, 2])?;
+        let project = Project::open(&path)?;
+        assert_eq!(project.audio_tracks.len(), 1);
+        assert!(project.recovered_tail);
+        let mut mixer = crate::audio::Mixer::open(&project.audio_tracks, 1.0, 1.0)?;
+        assert_eq!(mixer.read(0, 480)?, vec![0; 960]);
+        Ok(())
+    }
+    #[test]
     fn recovers_complete_frames_after_interrupted_append() -> Result<()> {
         let dir = crate::test_directory()?;
         let path = dir.path().join("fixture.srec");
