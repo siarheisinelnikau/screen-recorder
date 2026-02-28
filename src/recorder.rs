@@ -14,6 +14,7 @@ use std::{
 pub struct Control {
     stop: AtomicBool,
     paused: AtomicBool,
+    captured: AtomicBool,
     timeline: Mutex<Option<crate::timeline::Timeline>>,
     wake: Option<SyncSender<()>>,
 }
@@ -48,7 +49,11 @@ impl Control {
     pub fn is_stopped(&self) -> bool {
         self.stop.load(Ordering::Relaxed)
     }
+    pub fn has_frames(&self) -> bool {
+        self.captured.load(Ordering::Relaxed)
+    }
     fn begin(&self) {
+        self.captured.store(false, Ordering::Relaxed);
         *self.timeline.lock().unwrap() = Some(crate::timeline::Timeline::new(
             crate::timeline::now(),
             self.is_paused(),
@@ -179,6 +184,7 @@ fn record_impl(
             let timestamp = control.elapsed(crate::timeline::now()) / 10;
             let (frame, cursor) = source.sample()?;
             writer.append(&frame, timestamp, cursor)?;
+            control.captured.store(true, Ordering::Relaxed);
             frames += 1;
             if last_status.elapsed() >= Duration::from_millis(250) || frames == 1 {
                 progress(frames, timestamp as f64 / 1e6);
@@ -237,6 +243,7 @@ mod tests {
         );
         let p = Project::open(&path)?;
         assert_eq!(p.frames.len(), 2);
+        assert!(control.has_frames() && control.is_stopped());
         assert!(!p.recovered_tail);
         Ok(())
     }
@@ -256,6 +263,7 @@ mod tests {
             |_, _| {},
         )?;
         assert_eq!(source.n, 0);
+        assert!(!control.has_frames());
         Ok(())
     }
 }

@@ -2,36 +2,46 @@
 
 A Windows-first recorder for readable tutorials: capture a display, visible window or a precise region, then trim the clip and add cursor emphasis and smooth zoom. Independent MIT-licensed implementation, with original UI and code. Inspired by the workflow of [Screen Studio](https://screen.studio/); no affiliation or shared assets.
 
-**Version 0.1.0 is an initial implementation, not a hardware-validated public release.** Recording, editing and encoding are real code paths. Automated verification uses artificial frames only. Real desktop capture, UI interaction and updater replacement have deliberately not been run in this unattended development session.
+**Version 0.2.0 adds WASAPI audio capture and native MP4 export.** Synthetic H.264/AAC encoding and decoding have been exercised through Windows Media Foundation without capture or playback. Real desktop/audio capture, UI interaction, rendering performance and updater replacement remain unverified under the user's no-GUI/no-device instruction.
 
 ## Capabilities
 
-| Area | Implemented in 0.1.0 |
+| Area | Implemented in 0.2.0 |
 | --- | --- |
 | Sources | Explicit display, window or numeric region selection; physical virtual-desktop coordinates |
 | Recording | Windows GDI capture, 5–30 target fps, pause/resume, stop, visible state and Ctrl+Shift+F10 stop shortcut |
-| Storage | Append-only `.srec` projects, JPEG frames and scoped cursor/click samples, recovery of complete frames after an incomplete write |
+| Storage | Append-only `.srec` video and separate timestamped audio journals; recovery of complete frames/packets after an incomplete write |
 | Editing | Scrubbable preview, in/out trim, cursor arrow and highlight, expanding click rings, automatic 1.8× click zoom, editable 1–3× zoom segments |
-| Export | Streaming Motion JPEG AVI, original dimensions, constant frame rate, cancellation and progress |
+| Export | Windows Media Foundation MP4/H.264 + AAC, or silent Motion JPEG AVI; trim, cursor/zoom effects, cancellation, progress and no overwriting |
 | Updates | Installed version, manual check, background startup check with saved opt-out, explicit download/install/restart, checksum and PE architecture verification |
-| Audio | **Unavailable.** Microphone and system-audio options are disabled and clearly labeled. No audio device is opened. |
+| Audio | Optional default microphone and default system-output loopback via shared-mode WASAPI; separate gain controls and a synchronized stereo mix for MP4 |
 
-No MP4/H.264, webcam, timeline playback, hidden-window recording, HDR color management, protected-content capture or external-video import is provided. `.srec` is the editable recording format; AVI is the shareable output. There are no external codecs, FFmpeg, drivers, browser extensions, services, AI models or API keys.
+No webcam, timeline/audio playback, hidden-window recording, HDR color management, protected-content capture or external-video import is provided. `.srec` plus its sidecars is the editable recording; MP4 is the default shareable output. No external FFmpeg, drivers, browser extensions, services, models or API keys are required. The H.264/AAC encoders are Windows components, not bundled third-party codecs.
 
 ## Use on Windows
 
-The intended package is **`ScreenRecorder-v0.1.0.exe`**, Windows x64. Build it below; no repository or release has been published by this session. Windows 10/11 and a working OpenGL desktop driver are intended requirements; actual hardware compatibility remains to be verified.
+The package is **`ScreenRecorder-v0.2.0.exe`**, Windows x64. Build it below; no repository or release has been published by this session. Intended requirements: Windows 10/11 with Media Foundation/H.264/AAC and a working OpenGL desktop driver. Windows N installations need Media Feature Pack; this is not installed by the app. Actual clean-machine and hardware compatibility remain to be verified.
 
 1. Launch the portable executable manually. In **Record**, select Display or Window and press **Refresh sources**, or enter a Region using physical pixels. Choose a source explicitly.
-2. Set an absolute output folder, a new `.srec` filename and frame rate. The folder is created only after **Start recording**.
+2. Under **Sound**, opt into **Microphone**, **System sound**, both or neither. Both are off by default. Set an absolute output folder. The default filename is generated automatically; **Filename and frame rate** exposes those optional controls. The folder is created only after **Start recording**.
 3. Press **Start recording**. Pause and resume from the app. **Stop and save** or **Ctrl+Shift+F10** finalizes the project. Closing the app requests stop and waits for finalization.
-4. The saved project opens in **Edit**. Scrub the preview, set trim in/out, enable effects and optionally add zoom segments at the playhead. Focus X/Y are normalized coordinates from 0 to 1. Manual zooms override automatic zoom; the first matching manual segment wins when segments overlap.
-5. **Save edit decisions** writes a separate `.edit.json`; the source recording stays unchanged. Choose a new absolute `.avi` destination and **Export edited AVI**. Export does not implicitly save edit decisions.
+4. The saved project opens in **Edit**. Scrub the preview, set trim in/out and effects. **Manual zoom adjustments** exposes timing and normalized focus X/Y from 0 to 1; the first matching manual segment overrides automatic zoom. **Adjust mix** exposes gain only for tracks that exist. Preview does not play audio.
+5. **Save edit decisions** writes a separate `.edit.json`; source media stays unchanged. Select MP4 or silent AVI, choose a new absolute destination matching that format, and press **Export video**. MP4 includes audio when **Include recorded sound** is selected. Export does not implicitly save edit decisions.
 6. To resume later, enter a `.srec` path under **Continue an existing recording** and press **Open project**. If an edit sidecar is malformed, correct or rename that sidecar before reopening; the source project is retained.
 
 Keep the selected window visible and unoccluded. Window capture follows its visible screen rectangle, including its frame; it is not isolated window capture. Resizing, minimizing, closing, or moving any part outside the virtual desktop stops recording with a recoverable project. Display recording can include the recorder window; place the controls outside the selected region when needed. There is no hidden capture or global key logging. Cursor position and left-button state are sampled only during an explicitly started, unpaused recording; short clicks between samples may be missed. The stop key chord is also checked while paused.
 
-Capture sizes are limited to 64–4096 × 64–2160 pixels. A project is limited to 200,000 frames and 16 GiB. AVI 1.0 exports stop before 2 GB; trim shorter segments for large recordings. MJPEG files can be substantially larger than H.264 files. Slow capture/encoding reduces the sampled frame rate; timestamps preserve elapsed time and export repeats previous frames to maintain duration. Pause time is excluded.
+Capture sizes are limited to 64–4096 × 64–2160 pixels. A video journal is limited to 200,000 frames and 16 GiB; audio journals have separate limits below. AVI 1.0 exports stop before 2 GB; trim shorter segments for large recordings. MJPEG files can be substantially larger than H.264 files. Slow capture/encoding reduces the sampled frame rate; timestamps preserve elapsed time and export repeats previous frames to maintain duration. Pause time is excluded.
+
+## Sound and MP4 behavior
+
+The app uses the default Windows capture endpoint for microphone input and the default render endpoint for system loopback. Loopback captures the whole default output mix, including other applications; it is not per-application audio. No audio endpoint enumeration or activation happens until Start. There is no microphone monitoring, test-tone playback or automatic Windows privacy/volume change. Microphone access must already be permitted by Windows. Failure of a selected endpoint aborts recording rather than silently dropping that track. Device removal, timestamp errors, capture overrun or an unsupported mix format stops recording with an error and retains completed data.
+
+Video and audio share a performance-counter timeline. Pauses stop audio clients; packet intervals crossing pause/stop boundaries are clipped, and resumed time excludes the pause. Native float32 or PCM16/24/32, 8–192 kHz, one to eight channels with recognized speaker layouts is converted to 48 kHz stereo using linear resampling. Missing intervals export as silence. Two tracks mix at half gain each, followed by clipping protection; individual gains range from 0 to 2.
+
+Keep `Recording.srec.mic.saudio` and `Recording.srec.system.saudio` beside `Recording.srec` when moving a project. These float PCM journals can be large: about 23 MB/minute per track, with limits of 8 GiB and 1,000,000 packets per track. The recording reader recognizes complete packets and warns on a truncated tail. Existing video-only 0.1 projects and edit files remain readable. An existing audio sidecar prevents reuse of the same recording filename.
+
+MP4 uses the Windows software H.264 and AAC transforms with hardware transforms disabled. Odd dimensions are padded by replicating the last row/column to even dimensions. Encoding/finalization errors retain source media and do not publish an incomplete MP4. An adjacent `.partial.mp4` is created exclusively and removed on handled cancellation/failure; an existing partial is preserved. Finalization runs on the worker and may take time inside Windows APIs. AAC priming/padding can extend decoded audio slightly beyond the video; the 0.3-second fixture decoded to 0.32 seconds of silence. Long-session synchronization and actual devices still need manual checks.
 
 ## Screenshots
 
@@ -43,21 +53,22 @@ Use the installed Rust **1.96.1** MSVC toolchain (minimum 1.95) and Microsoft C+
 
 ```powershell
 # Run from E:\work\github\screen-recorder
-.\scripts\verify.ps1 -Offline
+.\scripts\verify.ps1 -Offline -NativeMedia
 .\scripts\package.ps1 -Offline
 ```
 
-Omit `-Offline` on a machine that needs to obtain dependencies. Packaging compiles a release binary with static CRT for `x86_64-pc-windows-msvc`, without starting it, and creates `dist/ScreenRecorder-v0.1.0.exe`, `dist/SHA256SUMS.txt`, `dist/LICENSE.txt` and generated `dist/THIRD_PARTY_NOTICES.txt` (including bundled font terms). Keep the license and notices with a distribution; see [third-party components](docs/THIRD_PARTY.md). The binary is not code-signed. No packaging step publishes anything.
+Omit `-Offline` on a machine that needs dependencies. `-NativeMedia` opts into the bounded synthetic Media Foundation encoder/decoder test; it never constructs a capture endpoint or plays media. Without that switch, unit tests and compilation still run. Packaging builds the static-CRT `x86_64-pc-windows-msvc` executable without starting it and creates `dist/ScreenRecorder-v0.2.0.exe`, `dist/SHA256SUMS.txt`, `dist/LICENSE.txt` and `dist/THIRD_PARTY_NOTICES.txt`. Keep the [license and notices](docs/THIRD_PARTY.md) with the unsigned executable. No step publishes anything.
 
 The optional fixture generator also never accesses a desktop or device:
 
 ```powershell
 cargo run --offline --locked --example synthetic --jobs 2
 python .\scripts\inspect-fixtures.py
+python .\scripts\inspect-mp4.py
 python .\scripts\inspect-package.py # After packaging; reads headers/imports, never launches the EXE
 ```
 
-It creates a short artificial project, an edited AVI and a silent PCM WAV under a new `.test-output/synthetic-*` directory. The WAV is solely a fixture for future audio work; it is not muxed into the silent AVI. The Python inspector checks RIFF structure, frame indexes, dimensions, duration and silence without playing media. Tests also cover partial-tail recovery, source failure, a simulated full encoder sink, cancellation, non-overwrite behavior, edit persistence, update selection and verification. See [verification](docs/VERIFICATION.md) for actual results and deferred checks.
+It creates an artificial project, two silent audio journals, edited MP4/AVI and a silent PCM WAV under `.test-output/synthetic-*`. The Python parsers independently check RIFF/ISO BMFF structure, codecs, sample counts and durations without playback. Tests also cover journal recovery, pause mapping, PCM conversion, cancellation, source/output preservation, settings and update verification. See [verification](docs/VERIFICATION.md) for results and deferred checks.
 
 ## Data and updates
 
@@ -67,4 +78,4 @@ The planned canonical repository is [siarheisinelnikau/screen-recorder](https://
 
 **Download and install (restarts app)** downloads only the newer stable x64 portable asset and requires `SHA256SUMS.txt`. Downloads are size-bounded, verified against the digest and checked for an x64 PE header. A helper waits for the old process to exit, backs up the executable, replaces it and relaunches the same installed path. A failed replacement attempts to restore the original. The application folder must be writable. Update staging folders `.screenrecorder-update-*` retain the previous executable and any error log for manual recovery; they are not automatically deleted. Install failures are recorded in staging and `%LOCALAPPDATA%\ScreenRecorder\update-error.txt`, which is displayed on the next launch. Replacement/restart, interrupted downloads and real networking still require manual validation. Digests are fetched over HTTPS from the same official release; this is not an independent code-signing scheme.
 
-Read the [architecture](docs/ARCHITECTURE.md), [manual validation checklist](docs/VERIFICATION.md) and [initial release draft](docs/RELEASE_NOTES_v0.1.0.md) before distributing this first build.
+Read the [architecture](docs/ARCHITECTURE.md), [design decisions](docs/DESIGN.md), [manual validation checklist](docs/VERIFICATION.md) and [0.2 release draft](docs/RELEASE_NOTES_v0.2.0.md) before distribution.

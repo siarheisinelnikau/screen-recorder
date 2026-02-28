@@ -254,7 +254,7 @@ impl RecorderApp {
                                 &tx,
                                 &ctx,
                                 format!(
-                                    "RECORDING · {seconds:.1} s · {frames} frames · Ctrl+Shift+F10 stops"
+                                    "Recorded {seconds:.1} s · {frames} frames · Ctrl+Shift+F10 stops"
                                 ),
                             );
                         },
@@ -644,10 +644,19 @@ impl RecorderApp {
             }
             if let Some(control) = &self.control {
                 let paused = control.is_paused();
-                if ui.button(if paused { "Resume" } else { "Pause" }).clicked() {
+                if ui
+                    .add_enabled(
+                        control.has_frames() && !control.is_stopped(),
+                        egui::Button::new(if paused { "Resume" } else { "Pause" }),
+                    )
+                    .clicked()
+                {
                     control.pause(!paused);
                 }
-                if ui.button("Stop and save").clicked() {
+                if ui
+                    .add_enabled(!control.is_stopped(), egui::Button::new("Stop and save"))
+                    .clicked()
+                {
                     control.stop();
                     self.status = "Finalizing recording…".into();
                 }
@@ -889,16 +898,21 @@ impl eframe::App for RecorderApp {
                 ui.selectable_value(&mut self.tab, Tab::Edit, "Edit");
                 ui.selectable_value(&mut self.tab, Tab::Settings, "Settings");
                 if let Some(control) = &self.control {
-                    let paused = control.is_paused();
-                    ui.colored_label(
-                        if paused { theme::WARNING } else { theme::ERROR },
-                        if paused {
-                            "● PAUSED"
-                        } else {
-                            "● RECORDING"
-                        },
-                    );
-                    if ui.small_button("Stop").clicked() {
+                    let (label, color) = if control.is_stopped() {
+                        ("FINALIZING", theme::WARNING)
+                    } else if !control.has_frames() {
+                        ("STARTING", theme::WARNING)
+                    } else if control.is_paused() {
+                        ("● PAUSED", theme::WARNING)
+                    } else {
+                        ("● RECORDING", theme::ERROR)
+                    };
+                    ui.colored_label(color, label);
+                    if self.tab != Tab::Record
+                        && ui
+                            .add_enabled(!control.is_stopped(), egui::Button::new("Stop"))
+                            .clicked()
+                    {
                         control.stop();
                     }
                 }
