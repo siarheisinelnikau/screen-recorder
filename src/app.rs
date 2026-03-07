@@ -1,5 +1,7 @@
 use crate::theme;
+mod review;
 use eframe::egui::{self, RichText};
+pub(crate) use review::run as render_review;
 use screen_recorder::{
     capture::{self, Target},
     editor::{self, Edit, Zoom},
@@ -20,6 +22,13 @@ use std::{
 };
 
 type JobResult<T> = Result<T, String>;
+const PRIMARY_ACTION_BOUNDS: &str = "screen-recorder-primary-action-bounds";
+const BODY_SCROLL_METRICS: &str = "screen-recorder-body-scroll-metrics";
+fn remember_primary(response: &egui::Response) {
+    response
+        .ctx
+        .data_mut(|data| data.insert_temp(egui::Id::unique(PRIMARY_ACTION_BOUNDS), response.rect));
+}
 enum Event {
     Sources(JobResult<Vec<Target>>),
     Loaded(JobResult<(Arc<Project>, Edit)>),
@@ -630,16 +639,34 @@ impl RecorderApp {
                 });
             });
         });
-        ui.add_space(6.0);
+        ui.add_space(12.0);
+        ui.separator();
+        ui.strong("Continue an existing recording");
         ui.horizontal(|ui| {
+            ui.add(
+                egui::TextEdit::singleline(&mut self.open_path)
+                    .hint_text("Absolute path to a .srec file")
+                    .desired_width(ui.available_width() - 145.0),
+            );
             if ui
-                .add_enabled(
-                    editable,
-                    egui::Button::new(RichText::new("●  Start recording").strong())
-                        .fill(theme::PRIMARY),
-                )
+                .add_enabled(editable, egui::Button::new("Open project"))
                 .clicked()
             {
+                self.load_project(ui.ctx());
+            }
+        });
+    }
+
+    fn record_controls_ui(&mut self, ui: &mut egui::Ui) {
+        let editable = self.can_start();
+        ui.add_space(6.0);
+        ui.horizontal(|ui| {
+            let start = ui.add_enabled(
+                editable,
+                egui::Button::new(RichText::new("Start recording").strong()).fill(theme::PRIMARY),
+            );
+            remember_primary(&start);
+            if start.clicked() {
                 self.start_recording(ui.ctx());
             }
             if let Some(control) = &self.control {
@@ -662,23 +689,7 @@ impl RecorderApp {
                 }
             }
         });
-        ui.small("Ctrl+Shift+F10 stops an active recording. No background cursor tracking runs before Start or while paused.");
-        ui.add_space(12.0);
-        ui.separator();
-        ui.strong("Continue an existing recording");
-        ui.horizontal(|ui| {
-            ui.add(
-                egui::TextEdit::singleline(&mut self.open_path)
-                    .hint_text("Absolute path to a .srec file")
-                    .desired_width(ui.available_width() - 145.0),
-            );
-            if ui
-                .add_enabled(editable, egui::Button::new("Open project"))
-                .clicked()
-            {
-                self.load_project(ui.ctx());
-            }
-        });
+        ui.small("Ctrl+Shift+F10 stops recording. Pause excludes time from video and sound.");
     }
 
     fn edit_ui(&mut self, ui: &mut egui::Ui) {
@@ -766,25 +777,26 @@ impl RecorderApp {
                 });
             });
         });
+        self.edit = Some(edit);
+        if changed {
+            self.mark_preview(ui.ctx());
+        }
+    }
+
+    fn export_controls_ui(&mut self, ui: &mut egui::Ui) {
+        if self.project.is_none() {
+            return;
+        }
+        let can_edit = matches!(self.busy, Busy::Idle | Busy::Preview) && !self.installing;
         ui.separator();
-        ui.horizontal(|ui| {
-            if ui
-                .add_enabled(can_edit, egui::Button::new("Save edit decisions"))
-                .clicked()
-            {
-                match edit.save(&project) {
-                    Ok(()) => self.status = "Edit decisions saved beside the project".into(),
-                    Err(e) => self.error = Some(format!("{e:#}")),
-                }
-            }
-            ui.small("Trim and zoom decisions are saved separately as .edit.json.");
-        });
-        ui.horizontal(|ui| {
-            ui.label("Output (new file only)");
+        ui.horizontal_wrapped(|ui| {
+            ui.strong("Export");
             let old = self.export_mp4;
             ui.add_enabled_ui(can_edit, |ui| {
-                ui.radio_value(&mut self.export_mp4, true, "MP4 · H.264 + AAC");
-                ui.radio_value(&mut self.export_mp4, false, "AVI · silent MJPEG");
+                ui.radio_value(&mut self.export_mp4, true, "MP4 · H.264 + AAC")
+                    .on_hover_text("Video with recorded sound; odd dimensions pad to even pixels");
+                ui.radio_value(&mut self.export_mp4, false, "AVI · silent MJPEG")
+                    .on_hover_text("Silent video, limited to 2 GB per export");
             });
             if old != self.export_mp4 {
                 self.export_path = PathBuf::from(&self.export_path)
@@ -797,22 +809,32 @@ impl RecorderApp {
             can_edit,
             egui::TextEdit::singleline(&mut self.export_path).desired_width(f32::INFINITY),
         );
-        self.edit = Some(edit);
-        ui.horizontal(|ui| {
-            if ui
-                .add_enabled(self.can_start(), egui::Button::new("Export video").fill(theme::PRIMARY))
-                .clicked()
-            {
+        ui.horizontal_wrapped(|ui| {
+            let export = ui.add_enabled(
+                self.can_start(),
+                egui::Button::new("Export video").fill(theme::PRIMARY),
+            );
+            remember_primary(&export);
+            if export.clicked() {
                 self.start_export(ui.ctx());
+            }
+            if ui
+                .add_enabled(can_edit, egui::Button::new("Save edit decisions"))
+                .on_hover_text(
+                    "Save trim, zoom and mix for the next session without changing source media",
+                )
+                .clicked()
+                && let (Some(project), Some(edit)) = (&self.project, &self.edit)
+            {
+                match edit.save(project) {
+                    Ok(()) => self.status = "Edit decisions saved beside the project".into(),
+                    Err(e) => self.error = Some(format!("{e:#}")),
+                }
             }
             if self.busy == Busy::Export && ui.button("Cancel export").clicked() {
                 self.cancel.store(true, Ordering::Relaxed);
             }
-            ui.small("MP4 uses Windows H.264/AAC. Odd dimensions pad to even pixels. AVI is silent and limited to 2 GB.");
         });
-        if changed {
-            self.mark_preview(ui.ctx());
-        }
     }
 
     fn settings_ui(&mut self, ui: &mut egui::Ui) {
@@ -842,7 +864,10 @@ impl RecorderApp {
         ui.add_space(10.0);
         ui.strong("Recording defaults");
         ui.label("Default output folder");
-        ui.text_edit_singleline(&mut self.settings.output_folder);
+        ui.add(
+            egui::TextEdit::singleline(&mut self.settings.output_folder)
+                .desired_width(f32::INFINITY),
+        );
         ui.horizontal(|ui| {
             ui.label("Frames per second");
             ui.add(egui::DragValue::new(&mut self.settings.fps).range(5..=30));
@@ -865,7 +890,7 @@ impl RecorderApp {
         ui.separator();
         ui.strong("Recording support");
         ui.label("GDI visible-area capture; WASAPI microphone and system loopback; Media Foundation MP4/H.264/AAC or silent Motion JPEG AVI. No webcam, hidden-window or protected-content capture.");
-        ui.label("Capture, hardware compatibility, real UI screenshots and update replacement require manual validation before a public release.");
+        ui.label("Device capture, desktop compatibility and update replacement require manual validation before a public release.");
     }
 }
 
@@ -885,6 +910,20 @@ impl eframe::App for RecorderApp {
         }
     }
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        self.show(ui);
+    }
+    fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
+        if let Some(control) = &self.control {
+            control.stop();
+        }
+        self.cancel.store(true, Ordering::Relaxed);
+        // Normal close waits through logic until the recording/export worker has finalized.
+    }
+}
+
+impl RecorderApp {
+    /// Shared by the real window and the isolated offscreen review. No second UI is built.
+    fn show(&mut self, ui: &mut egui::Ui) {
         egui::CentralPanel::default().show(ui, |ui| {
             ui.horizontal_wrapped(|ui| {
                 ui.label(
@@ -903,9 +942,9 @@ impl eframe::App for RecorderApp {
                     } else if !control.has_frames() {
                         ("STARTING", theme::WARNING)
                     } else if control.is_paused() {
-                        ("● PAUSED", theme::WARNING)
+                        ("PAUSED", theme::WARNING)
                     } else {
-                        ("● RECORDING", theme::ERROR)
+                        ("RECORDING", theme::ERROR)
                     };
                     ui.colored_label(color, label);
                     if self.tab != Tab::Record
@@ -921,33 +960,58 @@ impl eframe::App for RecorderApp {
                 }
             });
             ui.separator();
-            egui::ScrollArea::vertical()
-                .auto_shrink([false, false])
-                .show(ui, |ui| {
-                    match self.tab {
-                        Tab::Record => self.record_ui(ui),
-                        Tab::Edit => self.edit_ui(ui),
-                        Tab::Settings => self.settings_ui(ui),
-                    }
-                    ui.add_space(10.0);
-                    ui.separator();
-                    ui.label(&self.status);
-                    if let Some(error) = self.error.clone() {
-                        egui::Frame::group(ui.style()).show(ui, |ui| {
+            if let Some(error) = self.error.clone() {
+                egui::Frame::group(ui.style()).show(ui, |ui| {
+                    egui::ScrollArea::vertical()
+                        .id_salt("error-message")
+                        .max_height(88.0)
+                        .show(ui, |ui| {
                             ui.colored_label(theme::ERROR, error);
-                            if ui.small_button("Dismiss").clicked() {
-                                self.error = None;
-                            }
                         });
+                    if ui.small_button("Dismiss").clicked() {
+                        self.error = None;
                     }
                 });
+            }
+            let footer_height = match self.tab {
+                Tab::Record => 112.0,
+                Tab::Edit if self.project.is_some() => 184.0,
+                _ => 42.0,
+            };
+            let body_height = (ui.available_height() - footer_height).max(64.0);
+            let body = egui::ScrollArea::vertical()
+                .id_salt(match self.tab {
+                    Tab::Record => "record-body",
+                    Tab::Edit => "edit-body",
+                    Tab::Settings => "settings-body",
+                })
+                .max_height(body_height)
+                .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::VisibleWhenNeeded)
+                .auto_shrink([false, false])
+                .show(ui, |ui| match self.tab {
+                    Tab::Record => self.record_ui(ui),
+                    Tab::Edit => self.edit_ui(ui),
+                    Tab::Settings => self.settings_ui(ui),
+                });
+            ui.ctx().data_mut(|data| {
+                data.insert_temp(
+                    egui::Id::unique(BODY_SCROLL_METRICS),
+                    [
+                        body.content_size.x,
+                        body.content_size.y,
+                        body.inner_rect.width(),
+                        body.inner_rect.height(),
+                    ],
+                )
+            });
+            match self.tab {
+                Tab::Record => self.record_controls_ui(ui),
+                Tab::Edit => self.export_controls_ui(ui),
+                Tab::Settings => {}
+            }
+            ui.separator();
+            ui.add(egui::Label::new(&self.status).truncate())
+                .on_hover_text(&self.status);
         });
-    }
-    fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
-        if let Some(control) = &self.control {
-            control.stop();
-        }
-        self.cancel.store(true, Ordering::Relaxed);
-        // Normal close waits through logic until the recording/export worker has finalized.
     }
 }

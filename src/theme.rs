@@ -16,6 +16,8 @@ pub fn apply(ctx: &egui::Context) {
         style.spacing.item_spacing = egui::vec2(8.0, 8.0);
         style.spacing.button_padding = egui::vec2(12.0, 8.0);
         style.spacing.interact_size.y = 34.0;
+        // Keep overflow discoverable without hover-driven fade animations.
+        style.spacing.scroll = egui::style::ScrollStyle::solid();
         style
             .text_styles
             .insert(TextStyle::Heading, FontId::proportional(22.0));
