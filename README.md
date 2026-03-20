@@ -2,7 +2,7 @@
 
 A Windows-first recorder for readable tutorials: capture a display, visible window or a precise region, then trim the clip and add cursor emphasis and smooth zoom. Independent MIT-licensed implementation, with original UI and code. Inspired by the workflow of [Screen Studio](https://screen.studio/); no affiliation or shared assets.
 
-**Version 0.2.0 adds WASAPI audio capture and native MP4 export.** Synthetic H.264/AAC encoding and decoding have been exercised through Windows Media Foundation without capture or playback. Real desktop/audio capture, UI interaction, rendering performance and updater replacement remain unverified under the user's no-GUI/no-device instruction.
+**Version 0.2.0 adds WASAPI audio capture and native MP4 export.** Synthetic H.264/AAC encoding/decoding and finite CPU rendering of the actual UI components have been exercised without a window, capture or playback. Real desktop/audio capture, UI interaction, normal OpenGL/idle performance and updater replacement remain unverified.
 
 ## Capabilities
 
@@ -43,9 +43,17 @@ Keep `Recording.srec.mic.saudio` and `Recording.srec.system.saudio` beside `Reco
 
 MP4 uses the Windows software H.264 and AAC transforms with hardware transforms disabled. Odd dimensions are padded by replicating the last row/column to even dimensions. Encoding/finalization errors retain source media and do not publish an incomplete MP4. An adjacent `.partial.mp4` is created exclusively and removed on handled cancellation/failure; an existing partial is preserved. Finalization runs on the worker and may take time inside Windows APIs. AAC priming/padding can extend decoded audio slightly beyond the video; the 0.3-second fixture decoded to 0.32 seconds of silence. Long-session synchronization and actual devices still need manual checks.
 
-## Screenshots
+## Application-generated views
 
-**Real application and Settings screenshots are pending.** The user prohibited GUI launches, screenshots and desktop control during this run. No mock screenshots, copied product images or broken placeholder links are included. Capture both views after manual validation and add them here before publication.
+These are real Record/Edit/Settings components rendered by the packaged EXE's bounded `--render-review` mode. They use synthetic media and selected sound options as fixtures; no window, desktop capture, audio device, network or computer use is involved. A CPU fallback rasterizes the actual egui 0.37 meshes/font textures. The normal OpenGL presenter, native window chrome and interactions are **not** verified by these images. New installations still leave both sound options off.
+
+![Record view, actual application components with a synthetic source and both sound options selected](docs/screenshots/record.png)
+
+![Editor view, actual application components with synthetic video and silent audio tracks](docs/screenshots/edit.png)
+
+![Settings view, actual application components with isolated fixture preferences](docs/screenshots/settings.png)
+
+See [render review evidence](docs/RENDER_REVIEW.md) for the narrower/high-DPI/error views, defects found and the remaining desktop-rendering gate.
 
 ## Build and safe verification
 
@@ -66,9 +74,12 @@ cargo run --offline --locked --example synthetic --jobs 2
 python .\scripts\inspect-fixtures.py
 python .\scripts\inspect-mp4.py
 python .\scripts\inspect-package.py # After packaging; reads headers/imports, never launches the EXE
+.\scripts\render-review.ps1 # After packaging; finite CPU-only rendering, no window/devices/network
 ```
 
 It creates an artificial project, two silent audio journals, edited MP4/AVI and a silent PCM WAV under `.test-output/synthetic-*`. The Python parsers independently check RIFF/ISO BMFF structure, codecs, sample counts and durations without playback. Tests also cover journal recovery, pause mapping, PCM conversion, cancellation, source/output preservation, settings and update verification. See [verification](docs/VERIFICATION.md) for results and deferred checks.
+
+`render-review.ps1` separately invokes the packaged EXE with a new absolute output directory, a 30-second internal deadline and a 45-second external timeout. Six UI scenes use three finite passes each. PNGs, a scene manifest and process measurements are written under `.test-output/render-review-*`; existing output is refused. The capture path skips normal startup/settings/update logic and asserts that no workers were started. Primary recording/export button bounds must fit each viewport. It is a static layout review, not an idle/hidden or normal-presenter test.
 
 ## Data and updates
 
