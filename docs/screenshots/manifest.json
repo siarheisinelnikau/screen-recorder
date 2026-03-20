@@ -1,0 +1,179 @@
+{
+  "elapsed_ms": 208,
+  "fixtures": "synthetic video and silent audio only",
+  "mode": "offscreen CPU fallback; actual egui 0.37 application components; no window/event loop",
+  "production_presenter": "Glow/OpenGL (not tested by this capture)",
+  "scenes": [
+    {
+      "elapsed_ms": 13,
+      "logical_size": [
+        1120,
+        800
+      ],
+      "passes": 3,
+      "pixel_size": [
+        1120,
+        800
+      ],
+      "png": "record.png",
+      "primary_action_bounds": [
+        8.0,
+        694.0,
+        132.53125,
+        728.0
+      ],
+      "scale": 1.0,
+      "screen": "record",
+      "scroll_content_and_viewport": [
+        1104.0,
+        522.0,
+        1104.0,
+        616.0
+      ],
+      "triangles": 3860
+    },
+    {
+      "elapsed_ms": 16,
+      "logical_size": [
+        1120,
+        800
+      ],
+      "passes": 3,
+      "pixel_size": [
+        1120,
+        800
+      ],
+      "png": "edit.png",
+      "primary_action_bounds": [
+        8.0,
+        714.0,
+        116.71875,
+        748.0
+      ],
+      "scale": 1.0,
+      "screen": "edit",
+      "scroll_content_and_viewport": [
+        1104.0,
+        538.0,
+        1104.0,
+        544.0
+      ],
+      "triangles": 5210
+    },
+    {
+      "elapsed_ms": 12,
+      "logical_size": [
+        1120,
+        800
+      ],
+      "passes": 3,
+      "pixel_size": [
+        1120,
+        800
+      ],
+      "png": "settings.png",
+      "primary_action_bounds": null,
+      "scale": 1.0,
+      "screen": "settings",
+      "scroll_content_and_viewport": [
+        1104.0,
+        674.0,
+        1104.0,
+        686.0
+      ],
+      "triangles": 3842
+    },
+    {
+      "elapsed_ms": 26,
+      "logical_size": [
+        880,
+        650
+      ],
+      "passes": 3,
+      "pixel_size": [
+        1320,
+        975
+      ],
+      "png": "record-error.png",
+      "primary_action_bounds": [
+        8.0,
+        544.0,
+        132.53125,
+        578.0
+      ],
+      "scale": 1.5,
+      "screen": "record-error",
+      "scroll_content_and_viewport": [
+        854.0,
+        524.0625,
+        854.0,
+        384.0
+      ],
+      "triangles": 3823
+    },
+    {
+      "elapsed_ms": 15,
+      "logical_size": [
+        880,
+        650
+      ],
+      "passes": 3,
+      "pixel_size": [
+        880,
+        650
+      ],
+      "png": "edit-narrow.png",
+      "primary_action_bounds": [
+        8.0,
+        564.0,
+        116.71875,
+        598.0
+      ],
+      "scale": 1.0,
+      "screen": "edit-narrow",
+      "scroll_content_and_viewport": [
+        854.0,
+        553.0,
+        854.0,
+        394.0
+      ],
+      "triangles": 5022
+    },
+    {
+      "elapsed_ms": 25,
+      "logical_size": [
+        880,
+        720
+      ],
+      "passes": 3,
+      "pixel_size": [
+        1320,
+        1080
+      ],
+      "png": "settings-scale.png",
+      "primary_action_bounds": null,
+      "scale": 1.5,
+      "screen": "settings-scale",
+      "scroll_content_and_viewport": [
+        854.0,
+        676.03125,
+        854.0,
+        606.0
+      ],
+      "triangles": 3440
+    }
+  ],
+  "version": "0.2.0",
+  "process": {
+    "executable": "ScreenRecorder-v0.2.0.exe",
+    "sha256": "c1fd436a3e78db2ab819b22f3eeabc66ce46f4757afe72282ded6a6e22534450",
+    "pid": 57328,
+    "exit_code": 0,
+    "elapsed_ms": 461,
+    "cpu_ms": 187.5,
+    "cpu_percent_one_core": 40.67245119305857,
+    "sampled_peak_working_set_bytes": 38486016,
+    "scope": "Finite CPU offscreen capture only; no window or idle/hidden runtime verification"
+  },
+  "source_commit": "6c6d1af"
+}

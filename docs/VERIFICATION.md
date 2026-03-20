@@ -13,6 +13,7 @@ python .\scripts\inspect-fixtures.py
 python .\scripts\inspect-mp4.py
 .\scripts\package.ps1 -Offline
 python .\scripts\inspect-package.py
+.\scripts\render-review.ps1
 ```
 
 `-NativeMedia` explicitly runs the otherwise ignored Media Foundation integration test. Without it, normal synthetic unit tests, formatting and Clippy still run. No test calls `capture::Source::new` or `audio::Session::prepare`; neither video nor audio devices are enumerated or activated. The native test opens only its own artificial media file, disables hardware transforms/DXVA and decodes to memory without playback.
@@ -45,20 +46,26 @@ The example creates a 20-frame 320 × 180 project, two silent PCM journals, a tr
 
 The packaged `ScreenRecorder-v0.2.0.exe` is built with static CRT. `inspect-package.py` reads its x64 PE/GUI headers and imports without executing it, checks the SHA-256 asset, rejects dynamic MSVC/UCRT imports and checks generated license/font notices. The exact current hash accompanies the executable in `dist/SHA256SUMS.txt`; ignored `dist` artifacts are local handoff files, not a published release. FFmpeg/ffprobe is not installed; the native source reader provides the decoded-media check.
 
-Final local asset: 10,017,792 bytes; SHA-256 `7ee0747f2df0253d4a6fd4bf45c43f83b2e2e7c9a966515253a693591d770ff3`. Its imports include `mfplat.dll` and `mfreadwrite.dll` plus the existing OpenGL/OS libraries. This is static package evidence, not an application launch or hardware compatibility result.
+The current package checksum is in `dist/SHA256SUMS.txt`; the exact EXE used to generate the checked-in UI images is identified in `docs/screenshots/manifest.json`. Imports include `mfplat.dll` and `mfreadwrite.dll` plus the existing OpenGL/OS libraries. Static import inspection is not normal-presenter or hardware compatibility evidence.
 
 The native tests exposed and verified fixes for two concrete issues: a zero-duration extra frame caused by floating-point trim rounding, and an invalid byte-stream flush after sink shutdown. MP4 frame scheduling now uses integer clock ticks, and filesystem synchronization follows native sink release.
 
-## Rendering/design gate — incomplete
+## Static rendering review — performed
+
+The actual packaged EXE was invoked in a new bounded `--render-review` mode. It constructs no window or OS event loop, reads no normal preferences and starts no workers/network/capture. The same egui 0.37 application components, fonts and layout produce real meshes/textures. A numeric adapter feeds those to an installed CPU rasterizer; this is explicitly a fallback rather than the normal Glow presenter.
+
+Six PNGs were decoded and visually inspected: Record, Edit, Settings, a 150% error case, minimum-size Edit and 150% Settings. The review found and corrected hidden primary export/error controls, an unnecessarily truncated settings path and a missing Start glyph. Actual button rectangles are now asserted to remain within the viewport. Images, scene dimensions, finite frame counts and executable identity are retained under `docs/screenshots`; [the review record](RENDER_REVIEW.md) states the measurements and scope. CPU time during this finite workload is not idle CPU evidence.
+
+## Normal desktop rendering gate — incomplete
 
 `product-design` and the current `rust-performance` gate have been read and applied to source decisions. The existing renderer is eframe Glow/OpenGL; it is not CPU rasterization. Pinned source selects `Wait`/`WaitUntil` and runs only `App::logic` while hidden. The application has no unconditional repaint loop; progress changes are bounded and previews coalesce. These source observations do not prove runtime behavior.
 
-GUI/self-capture is prohibited, so there are no genuine application/settings PNGs, live layout/contrast/accessibility checks, CPU/GPU measurements, frame/present counters, hidden/restore observations or a runtime backend verification. The gate is **not passed**. The user's preference for verified CPU rendering remains relevant; this feature extension does not replace the existing presenter with another unverified path. Before any future visual launch, follow the bounded diagnostic gate and evaluate the renderer/idle behavior. See [design decisions](DESIGN.md).
+There are now genuine application-generated component PNGs and finite CPU capture measurements. There are still no live window, normal OpenGL/GPU, OS DPI, accessibility traversal, settled idle/minimized or restore measurements. The ordinary desktop gate is **not passed**. The user's preference for verified CPU rendering remains relevant; the diagnostic fallback does not replace or certify the production presenter. Before a future window launch, follow the bounded diagnostic gate and evaluate normal renderer/idle behavior. See [design decisions](DESIGN.md).
 
 ## Deferred manual/device checks
 
 - Launch the actual packaged EXE on Windows 10/11 x64 after the rendering gate; test settled idle, interaction, return to idle, minimized/hidden and restore. Verify backend, frame production, memory, input latency and presentation behavior.
-- Capture real Record, Edit and Settings images through an authorized finite app-generated capture mode where practical. Review 100–200% DPI, long source/path names, focus/keyboard/accessibility, errors, empty states and expanded/collapsed controls. Add accurate README screenshots.
+- Compare the checked component PNGs with an authorized normal-window/native-presenter capture. Extend coverage to 200% OS DPI, focus/keyboard/accessibility, empty/expanded states and additional long source names. The README already contains the reviewed CPU component images; normal-presenter parity is pending.
 - Record chosen display/window/region, including negative origins and different DPI. Verify cursor alignment, occlusion/resize/minimize/close failure behavior and Ctrl+Shift+F10 while focused elsewhere/paused.
 - Explicitly enable microphone/system sound separately and together on disposable recordings. Verify privacy-denied/no-endpoint errors, silence, mono/stereo/multichannel formats, device removal/change, shared mode, no monitoring, pause/resume and clean device release on stop/close/error. These WASAPI paths compile but have not touched a real device.
 - Validate long-session A/V sync, real speech/music resampling/downmix quality, sample-clock drift, startup delay and AAC padding in independent players. System loopback covers all apps on the default output, and protected audio may be excluded by Windows. No automatic endpoint switching is implemented.

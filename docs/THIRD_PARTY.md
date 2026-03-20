@@ -4,4 +4,6 @@ ScreenRecorder's own code is MIT-licensed. Rust crates retain their respective l
 
 The egui default font package contains font-specific licenses, including OFL-1.1 and Ubuntu-font-1.0; do not assume fonts are covered solely by the application MIT license. `scripts/notices.ps1` resolves the locked Windows dependency graph and collects package license declarations and included license/notice/copyright texts, including bundled font `.txt` files. The packaging script writes the result to `dist/THIRD_PARTY_NOTICES.txt` together with the application's `LICENSE.txt`. Distribute these ancillary files with the single standalone EXE. They do not constitute additional executable architecture variants.
 
+The offscreen review path additionally uses `egui_software_backend` 0.0.2 and numeric egui 0.33 compatibility types (MIT OR Apache-2.0). Only meshes, clipping, texture pixels and options cross that adapter; the actual UI, layout and font generation remain egui 0.37. The older egui context/font renderer is not used to construct a second interface. These dependencies and their notices are included by the packaging script.
+
 Release preparation should review the generated notices and licensing for the exact dependency graph being shipped. No competitor code, imagery or branding is bundled.

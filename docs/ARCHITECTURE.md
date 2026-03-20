@@ -2,6 +2,8 @@
 
 ScreenRecorder is a Rust desktop application. `eframe` 0.37 supplies the Windows UI, text and existing OpenGL presentation; `windows-sys` exposes GDI. `windows` supplies WASAPI, COM and Media Foundation. `image` supplies JPEG encoding/decoding and CPU resampling. There is no external media process or runtime service. The renderer has not been changed or runtime-certified by this audio/export extension; see the incomplete rendering gate below.
 
+`--render-review ABSOLUTE_NEW_DIRECTORY` takes an early, CPU-only diagnostic branch before normal GUI/updater/settings startup. It constructs isolated fixture state and invokes the same `RecorderApp::show` as the real window. Three finite passes per scene settle fonts/layout, then actual egui 0.37 triangles, clipping and texture deltas are bridged to `egui_software_backend` 0.0.2's egui 0.33 numeric types. No older UI context is constructed. This fallback saves genuine application client-area PNGs, with its difference from the normal OpenGL presenter recorded explicitly. There is no window/event loop, screen readback, network, audio activation or UI worker; capture asserts no workers were started. An internal 30-second deadline and external owned-process timeout bound the operation. See [render review](RENDER_REVIEW.md).
+
 ## Boundaries and lifetime
 
 - `capture::FrameSource` is the frame boundary. The Windows `Source` owns a screen DC, memory DC and top-down DIB. It uses `BitBlt` into the reusable DIB and converts BGRA to RGB. GDI resources are restored/released on every exit path. The source is created and destroyed on the capture worker after the Start action; it is never constructed by a test.
