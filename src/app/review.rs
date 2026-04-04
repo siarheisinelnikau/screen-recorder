@@ -1,7 +1,8 @@
 //! Finite CPU-only rendering of the actual app components, without a window or devices.
-//! The normal presenter remains Glow. The 0.33 bridge transports only numeric meshes,
+//! The shared 0.33 bridge transports only numeric meshes,
 //! textures and clipping to a cached CPU rasterizer; all UI/layout/fonts are egui 0.37.
 use super::*;
+use crate::raster::{meshes, textures};
 use anyhow::{Context, Result, ensure};
 use egui_software_backend::{BufferMutRef, ColorFieldOrder, EguiSoftwareRender};
 use screen_recorder::{
@@ -78,11 +79,22 @@ fn fixture(root: &Path) -> Result<Arc<Project>> {
     let mut writer = ProjectWriter::create(&path, 640, 360, 15)?;
     for i in 0..16 {
         let image = image::RgbImage::from_fn(640, 360, |x, y| {
-            if (100..540).contains(&x) && (80..280).contains(&y) {
-                image::Rgb([43, 88 + i as u8, 106])
+            let c = if !(36..604).contains(&x) || !(28..332).contains(&y) {
+                [231, 235, 242]
+            } else if y < 58 {
+                [247, 249, 252]
+            } else if x < 158 {
+                [239, 243, 249]
+            } else if (182..554).contains(&x)
+                && ((86..101).contains(&y) || (130..141).contains(&y) || (172..183).contains(&y))
+            {
+                [202, 211, 226]
+            } else if (182..322).contains(&x) && (230..268).contains(&y) {
+                [49, 84, 220]
             } else {
-                image::Rgb([24 + (x / 32) as u8, 30 + (y / 24) as u8, 43])
-            }
+                [255, 255, 255]
+            };
+            image::Rgb(c)
         });
         writer.append(
             &image,
@@ -105,6 +117,10 @@ fn fixture(root: &Path) -> Result<Arc<Project>> {
         audio.finish()?;
     }
     Ok(Arc::new(Project::open(&path)?))
+}
+
+pub(super) fn native_fixture(ctx: &egui::Context, root: &Path) -> Result<RecorderApp> {
+    app(ctx, root, fixture(root)?, &SCENES[1])
 }
 
 fn app(
@@ -142,6 +158,7 @@ fn app(
     );
     let (tx, rx) = mpsc::sync_channel(8);
     Ok(RecorderApp{
+        isolated:true,
         settings:Settings{startup_updates:false,output_folder:root.join("Recordings").to_string_lossy().into_owned(),fps:15,microphone:true,system_audio:true},
         settings_path:root.join("settings.json"),tab:scene.tab,
         sources:vec![Target::Display{left:0,top:0,width:1920,height:1080,name:"Display 1 · 1920 × 1080 (synthetic fixture)".into()}],
@@ -153,92 +170,6 @@ fn app(
         busy:Busy::Idle,worker:None,control:None,cancel:Arc::new(AtomicBool::new(false)),tx,rx,
         update_worker:None,update_busy:false,update:None,update_message:"No check performed".into(),installing:false,closing:false,
     })
-}
-
-fn id(id: egui::TextureId) -> egui_compat::TextureId {
-    match id {
-        egui::TextureId::Managed(n) => egui_compat::TextureId::Managed(n),
-        egui::TextureId::User(n) => egui_compat::TextureId::User(n),
-    }
-}
-fn color(c: egui::Color32) -> egui_compat::Color32 {
-    let [r, g, b, a] = c.to_array();
-    egui_compat::Color32::from_rgba_premultiplied(r, g, b, a)
-}
-fn filter(f: egui::TextureFilter) -> egui_compat::TextureFilter {
-    match f {
-        egui::TextureFilter::Nearest => egui_compat::TextureFilter::Nearest,
-        egui::TextureFilter::Linear => egui_compat::TextureFilter::Linear,
-    }
-}
-fn textures(delta: &egui::TexturesDelta) -> egui_compat::TexturesDelta {
-    egui_compat::TexturesDelta {
-        set: delta
-            .set
-            .iter()
-            .flat_map(|(texture, changes)| changes.iter().map(move |change| (texture, change)))
-            .map(|(texture, change)| {
-                let egui::ImageData::Color(image) = &change.image;
-                let options = egui_compat::TextureOptions {
-                    magnification: filter(change.options.magnification),
-                    minification: filter(change.options.minification),
-                    wrap_mode: match change.options.wrap_mode {
-                        egui::TextureWrapMode::ClampToEdge => {
-                            egui_compat::TextureWrapMode::ClampToEdge
-                        }
-                        egui::TextureWrapMode::Repeat => egui_compat::TextureWrapMode::Repeat,
-                        egui::TextureWrapMode::MirroredRepeat => {
-                            egui_compat::TextureWrapMode::MirroredRepeat
-                        }
-                    },
-                    mipmap_mode: change.options.mipmap_mode.map(filter),
-                };
-                (
-                    id(*texture),
-                    egui_compat::epaint::ImageDelta {
-                        image: egui_compat::ImageData::Color(Arc::new(
-                            egui_compat::ColorImage::new(
-                                image.size,
-                                image.pixels.iter().copied().map(color).collect(),
-                            ),
-                        )),
-                        options,
-                        pos: change.pos,
-                    },
-                )
-            })
-            .collect(),
-        free: delta.free.iter().copied().map(id).collect(),
-    }
-}
-fn meshes(primitives: Vec<egui::ClippedPrimitive>) -> Result<Vec<egui_compat::ClippedPrimitive>> {
-    primitives
-        .into_iter()
-        .map(|p| {
-            let egui::epaint::Primitive::Mesh(mesh) = p.primitive else {
-                anyhow::bail!("Offscreen review cannot render a GPU callback");
-            };
-            Ok(egui_compat::ClippedPrimitive {
-                clip_rect: egui_compat::Rect::from_min_max(
-                    egui_compat::pos2(p.clip_rect.min.x, p.clip_rect.min.y),
-                    egui_compat::pos2(p.clip_rect.max.x, p.clip_rect.max.y),
-                ),
-                primitive: egui_compat::epaint::Primitive::Mesh(egui_compat::Mesh {
-                    indices: mesh.indices,
-                    vertices: mesh
-                        .vertices
-                        .into_iter()
-                        .map(|v| egui_compat::epaint::Vertex {
-                            pos: egui_compat::pos2(v.pos.x, v.pos.y),
-                            uv: egui_compat::pos2(v.uv.x, v.uv.y),
-                            color: color(v.color),
-                        })
-                        .collect(),
-                    texture_id: id(mesh.texture_id),
-                }),
-            })
-        })
-        .collect()
 }
 
 pub(crate) fn run(root: &Path) -> Result<()> {
@@ -336,7 +267,7 @@ pub(crate) fn run(root: &Path) -> Result<()> {
     fs::write(
         root.join("manifest.json"),
         serde_json::to_vec_pretty(
-            &serde_json::json!({"version":updater::VERSION,"mode":"offscreen CPU fallback; actual egui 0.37 application components; no window/event loop", "production_presenter":"Glow/OpenGL (not tested by this capture)","fixtures":"synthetic video and silent audio only","elapsed_ms":started.elapsed().as_millis(),"scenes":records}),
+            &serde_json::json!({"version":updater::VERSION,"mode":"offscreen CPU rendering; actual egui 0.37 application components; no window/event loop", "production_presenter":"same CPU rasterizer; softbuffer Win32 GDI presentation tested separately","fixtures":"synthetic video and silent audio only","elapsed_ms":started.elapsed().as_millis(),"scenes":records}),
         )?,
     )?;
     Ok(())
