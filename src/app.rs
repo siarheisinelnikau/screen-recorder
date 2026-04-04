@@ -1,6 +1,8 @@
 use crate::theme;
+mod diagnostics;
 mod review;
-use eframe::egui::{self, RichText};
+pub(crate) use diagnostics::run as diagnose_render;
+use egui::{self, RichText};
 pub(crate) use review::run as render_review;
 use screen_recorder::{
     capture::{self, Target},
@@ -56,6 +58,7 @@ enum Busy {
 }
 
 pub struct RecorderApp {
+    isolated: bool,
     settings: Settings,
     settings_path: PathBuf,
     tab: Tab,
@@ -112,8 +115,7 @@ fn recording_name() -> String {
 }
 
 impl RecorderApp {
-    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        let ctx = &cc.egui_ctx;
+    pub fn new(ctx: &egui::Context) -> Self {
         theme::apply(ctx);
         let settings_path = settings::directory().join("settings.json");
         let (mut settings, error) = match Settings::load(&settings_path) {
@@ -144,6 +146,7 @@ impl RecorderApp {
             .filter(|m| m.len() < 64 * 1024)
             .and_then(|_| std::fs::read_to_string(&update_error_path).ok());
         let mut app = Self {
+            isolated: false,
             settings,
             settings_path,
             tab: Tab::Record,
@@ -190,6 +193,9 @@ impl RecorderApp {
         ctx.request_repaint();
     }
     fn refresh_sources(&mut self, ctx: &egui::Context) {
+        if self.isolated {
+            return;
+        }
         self.busy = Busy::Sources;
         let (tx, ctx) = (self.tx.clone(), ctx.clone());
         self.worker = Some(std::thread::spawn(move || {
@@ -218,6 +224,9 @@ impl RecorderApp {
             .cloned()
     }
     fn start_recording(&mut self, ctx: &egui::Context) {
+        if self.isolated {
+            return;
+        }
         let Some(target) = self.selected_target() else {
             self.error =
                 Some("Choose a source. Use Refresh sources to list displays and windows.".into());
@@ -280,6 +289,9 @@ impl RecorderApp {
         }));
     }
     fn load_project(&mut self, ctx: &egui::Context) {
+        if self.isolated {
+            return;
+        }
         let path = PathBuf::from(self.open_path.trim());
         self.busy = Busy::Load;
         self.status = "Opening recording…".into();
@@ -295,6 +307,9 @@ impl RecorderApp {
         }));
     }
     fn request_preview(&mut self, ctx: &egui::Context) {
+        if self.isolated {
+            return;
+        }
         let (Some(project), Some(edit)) = (self.project.clone(), self.edit.clone()) else {
             return;
         };
@@ -329,6 +344,9 @@ impl RecorderApp {
         }));
     }
     fn start_export(&mut self, ctx: &egui::Context) {
+        if self.isolated {
+            return;
+        }
         let (Some(project), Some(edit)) = (self.project.clone(), self.edit.clone()) else {
             return;
         };
@@ -376,6 +394,9 @@ impl RecorderApp {
         }));
     }
     fn check_updates(&mut self, ctx: &egui::Context) {
+        if self.isolated {
+            return;
+        }
         if self.update_busy {
             return;
         }
@@ -387,6 +408,9 @@ impl RecorderApp {
         }));
     }
     fn install_update(&mut self, ctx: &egui::Context) {
+        if self.isolated {
+            return;
+        }
         if self.update_busy || !self.can_start() {
             return;
         }
@@ -577,7 +601,7 @@ impl RecorderApp {
         ui.label("Choose exactly what to record. Add focus and cursor effects afterwards.");
         ui.add_space(10.0);
         let editable = self.can_start();
-        egui::Frame::group(ui.style()).show(ui,|ui| {
+        theme::panel(ui).show(ui,|ui| {
             ui.strong("01   Capture source");
             ui.add_enabled_ui(editable,|ui| {
                 ui.horizontal(|ui| {
@@ -663,7 +687,12 @@ impl RecorderApp {
         ui.horizontal(|ui| {
             let start = ui.add_enabled(
                 editable,
-                egui::Button::new(RichText::new("Start recording").strong()).fill(theme::PRIMARY),
+                egui::Button::new(
+                    RichText::new("Start recording")
+                        .strong()
+                        .color(theme::ON_PRIMARY),
+                )
+                .fill(theme::PRIMARY),
             );
             remember_primary(&start);
             if start.clicked() {
@@ -712,13 +741,13 @@ impl RecorderApp {
         });
         ui.columns(2,|columns| {
             let ui=&mut columns[0];
-            egui::Frame::group(ui.style()).show(ui,|ui| {
+            theme::panel(ui).show(ui,|ui| {
                 ui.strong("Preview");
                 if let Some(texture)=&self.preview {
                     ui.add(egui::Image::new(texture).fit_to_exact_size(egui::vec2(ui.available_width(),ui.available_width()*project.height as f32/project.width as f32)).sense(egui::Sense::click()))
                         .on_hover_text("Scrub the timeline to inspect the edited output");
                 } else {ui.add_space(100.0);ui.label("Preparing preview…");ui.add_space(100.0);}
-                changed|=ui.add_enabled(can_edit,egui::Slider::new(&mut self.playhead,0.0..=project.duration()).text("seconds").fixed_decimals(2)).changed();
+                changed|=ui.add_enabled_ui(can_edit,|ui|theme::slider(ui,egui::Slider::new(&mut self.playhead,0.0..=project.duration()).text("seconds").fixed_decimals(2))).inner.changed();
                 ui.small("Preview and export use the same effects. Source frames remain unchanged.");
             });
             let ui=&mut columns[1];
@@ -745,8 +774,8 @@ impl RecorderApp {
                     ui.checkbox(&mut edit.include_audio,"Include recorded sound");
                     if edit.include_audio{ui.collapsing("Adjust mix",|ui|{
                         for track in &project.audio_tracks{match track.kind{
-                            screen_recorder::audio::Kind::Microphone=>{ui.add(egui::Slider::new(&mut edit.microphone_gain,0.0..=2.0).text("Microphone"));},
-                            screen_recorder::audio::Kind::System=>{ui.add(egui::Slider::new(&mut edit.system_gain,0.0..=2.0).text("System sound"));},
+                            screen_recorder::audio::Kind::Microphone=>{theme::slider(ui,egui::Slider::new(&mut edit.microphone_gain,0.0..=2.0).text("Microphone"));},
+                            screen_recorder::audio::Kind::System=>{theme::slider(ui,egui::Slider::new(&mut edit.system_gain,0.0..=2.0).text("System sound"));},
                         }}
                         ui.small("Two tracks mix at half gain each. Preview does not play sound.");
                     });}
@@ -812,7 +841,8 @@ impl RecorderApp {
         ui.horizontal_wrapped(|ui| {
             let export = ui.add_enabled(
                 self.can_start(),
-                egui::Button::new("Export video").fill(theme::PRIMARY),
+                egui::Button::new(RichText::new("Export video").color(theme::ON_PRIMARY))
+                    .fill(theme::PRIMARY),
             );
             remember_primary(&export);
             if export.clicked() {
@@ -844,7 +874,7 @@ impl RecorderApp {
             updater::VERSION
         ));
         ui.add_space(8.0);
-        egui::Frame::group(ui.style()).show(ui,|ui| {
+        theme::panel(ui).show(ui,|ui| {
             ui.strong("Updates");
             if ui.checkbox(&mut self.settings.startup_updates,"Check for updates on startup").changed()
                 && let Err(e)=self.settings.save(&self.settings_path) {
@@ -894,8 +924,8 @@ impl RecorderApp {
     }
 }
 
-impl eframe::App for RecorderApp {
-    fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+impl crate::host::Application for RecorderApp {
+    fn logic(&mut self, ctx: &egui::Context) {
         self.process_events(ctx);
         if ctx.input(|i| i.viewport().close_requested())
             && (self.busy != Busy::Idle || self.installing)
@@ -909,10 +939,10 @@ impl eframe::App for RecorderApp {
             ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
         }
     }
-    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui) {
         self.show(ui);
     }
-    fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
+    fn on_exit(&mut self) {
         if let Some(control) = &self.control {
             control.stop();
         }
@@ -961,7 +991,7 @@ impl RecorderApp {
             });
             ui.separator();
             if let Some(error) = self.error.clone() {
-                egui::Frame::group(ui.style()).show(ui, |ui| {
+                theme::panel(ui).show(ui, |ui| {
                     egui::ScrollArea::vertical()
                         .id_salt("error-message")
                         .max_height(88.0)

@@ -1,23 +1,38 @@
 //! Shared visual roles. No timers, platform access or rendering is performed here.
-use eframe::egui::{self, Color32, FontId, TextStyle};
-pub const BACKGROUND: Color32 = Color32::from_rgb(19, 25, 33);
-pub const SURFACE: Color32 = Color32::from_rgb(27, 35, 45);
-pub const TEXT: Color32 = Color32::from_rgb(237, 242, 247);
-pub const SECONDARY: Color32 = Color32::from_rgb(171, 186, 201);
-pub const BORDER: Color32 = Color32::from_rgb(65, 80, 95);
-pub const ACCENT: Color32 = Color32::from_rgb(122, 222, 216);
-pub const PRIMARY: Color32 = Color32::from_rgb(25, 106, 115);
-pub const WARNING: Color32 = Color32::from_rgb(231, 199, 125);
-pub const ERROR: Color32 = Color32::from_rgb(239, 148, 155);
-pub const SUCCESS: Color32 = Color32::from_rgb(141, 218, 178);
+use egui::{self, Color32, FontId, TextStyle};
+pub const BACKGROUND: Color32 = Color32::from_rgb(244, 246, 249);
+pub const SURFACE: Color32 = Color32::WHITE;
+pub const TEXT: Color32 = Color32::from_rgb(29, 37, 51);
+pub const SECONDARY: Color32 = Color32::from_rgb(91, 104, 123);
+pub const BORDER: Color32 = Color32::from_rgb(206, 214, 226);
+pub const CONTROL_TRACK: Color32 = Color32::from_rgb(128, 141, 162);
+pub const ACCENT: Color32 = Color32::from_rgb(38, 57, 91);
+pub const PRIMARY: Color32 = Color32::from_rgb(49, 84, 220);
+pub const ON_PRIMARY: Color32 = Color32::WHITE;
+pub const SELECTION: Color32 = Color32::from_rgb(226, 234, 255);
+pub const WARNING: Color32 = Color32::from_rgb(139, 86, 10);
+pub const ERROR: Color32 = Color32::from_rgb(179, 36, 63);
+pub const SUCCESS: Color32 = Color32::from_rgb(28, 112, 78);
+pub fn panel(ui: &egui::Ui) -> egui::Frame {
+    egui::Frame::group(ui.style()).fill(SURFACE)
+}
+pub fn slider(ui: &mut egui::Ui, slider: egui::Slider<'_>) -> egui::Response {
+    ui.scope(|ui| {
+        ui.visuals_mut().widgets.inactive.bg_fill = CONTROL_TRACK;
+        ui.add(slider)
+    })
+    .inner
+}
 pub fn apply(ctx: &egui::Context) {
-    ctx.set_visuals(egui::Visuals::dark());
-    ctx.style_mut_of(egui::Theme::Dark, |style| {
+    ctx.set_theme(egui::ThemePreference::Light);
+    ctx.set_visuals(egui::Visuals::light());
+    ctx.style_mut_of(egui::Theme::Light, |style| {
         style.spacing.item_spacing = egui::vec2(8.0, 8.0);
         style.spacing.button_padding = egui::vec2(12.0, 8.0);
         style.spacing.interact_size.y = 34.0;
         // Keep overflow discoverable without hover-driven fade animations.
         style.spacing.scroll = egui::style::ScrollStyle::solid();
+        style.spacing.scroll.foreground_color = true;
         style
             .text_styles
             .insert(TextStyle::Heading, FontId::proportional(22.0));
@@ -38,12 +53,20 @@ pub fn apply(ctx: &egui::Context) {
         visuals.weak_text_color = Some(SECONDARY);
         visuals.panel_fill = BACKGROUND;
         visuals.window_fill = SURFACE;
-        visuals.selection.bg_fill = PRIMARY;
-        visuals.selection.stroke.color = TEXT;
+        visuals.extreme_bg_color = SURFACE;
+        visuals.selection.bg_fill = SELECTION;
+        visuals.selection.stroke = egui::Stroke::new(1.5, PRIMARY);
+        visuals.widgets.noninteractive.bg_stroke = egui::Stroke::new(1.0, BORDER);
+        visuals.widgets.noninteractive.fg_stroke.color = SECONDARY;
         visuals.widgets.inactive.bg_fill = SURFACE;
+        visuals.widgets.inactive.weak_bg_fill = SURFACE;
         visuals.widgets.inactive.bg_stroke = egui::Stroke::new(1.0, BORDER);
-        visuals.widgets.hovered.bg_fill = Color32::from_rgb(39, 64, 73);
-        visuals.widgets.active.bg_fill = PRIMARY;
+        visuals.widgets.inactive.fg_stroke.color = SECONDARY;
+        visuals.widgets.hovered.bg_fill = Color32::from_rgb(234, 239, 250);
+        visuals.widgets.hovered.weak_bg_fill = Color32::from_rgb(234, 239, 250);
+        visuals.widgets.active.bg_fill = SELECTION;
+        visuals.widgets.active.weak_bg_fill = SELECTION;
+        visuals.widgets.active.bg_stroke = egui::Stroke::new(1.5, PRIMARY);
         visuals.error_fg_color = ERROR;
         visuals.warn_fg_color = WARNING;
     });

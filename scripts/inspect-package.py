@@ -43,12 +43,13 @@ while any(data[descriptor:descriptor+20]):
 for name in imports:
     lower = name.lower()
     assert not lower.startswith(("vcruntime", "msvcp", "api-ms-win-crt")) and lower != "ucrtbase.dll", f"Dynamic CRT import: {name}"
+assert not any(n.lower().startswith(("opengl", "d3d", "dxgi", "vulkan")) for n in imports), "Unexpected GPU renderer import"
 digest = hashlib.sha256(data).hexdigest()
 checksum = (root / "dist" / "SHA256SUMS.txt").read_text().strip().split()
 assert checksum == [digest, asset.name]
 assert (root / "dist" / "LICENSE.txt").is_file()
 notices = (root / "dist" / "THIRD_PARTY_NOTICES.txt").read_text(encoding="utf-8")
-assert "Ubuntu" in notices and "OFL" in notices and "eframe" in notices
+assert "Ubuntu" in notices and "OFL" in notices and "softbuffer" in notices
 print(f"Validated package: x64 Windows GUI, {len(data):,} bytes, no dynamic MSVC/UCRT imports")
 print(f"SHA-256 {digest}")
 print("Imports: " + ", ".join(imports))
