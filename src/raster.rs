@@ -17,8 +17,8 @@ fn filter(f: egui::TextureFilter) -> egui_compat::TextureFilter {
         egui::TextureFilter::Linear => egui_compat::TextureFilter::Linear,
     }
 }
-pub(crate) fn textures(delta: &egui::TexturesDelta) -> egui_compat::TexturesDelta {
-    egui_compat::TexturesDelta {
+pub(crate) fn textures(delta: &mut egui::TexturesDelta) -> egui_compat::TexturesDelta {
+    let converted = egui_compat::TexturesDelta {
         set: delta
             .set
             .iter()
@@ -55,7 +55,10 @@ pub(crate) fn textures(delta: &egui::TexturesDelta) -> egui_compat::TexturesDelt
             })
             .collect(),
         free: delta.free.iter().copied().map(id).collect(),
-    }
+    };
+    // egui 0.37 requires explicit consumption, including in debug builds.
+    delta.clear();
+    converted
 }
 pub(crate) fn meshes(
     primitives: Vec<egui::ClippedPrimitive>,

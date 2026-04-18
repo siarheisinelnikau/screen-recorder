@@ -137,7 +137,7 @@ impl Root {
         self.raster.render(
             &mut BufferMutRef::new(&mut self.pixels, size.width as usize, size.height as usize),
             &primitives,
-            &raster::textures(&output.textures_delta),
+            &raster::textures(&mut output.textures_delta),
             output.pixels_per_point,
         );
         self.bitmap.clear();
@@ -178,12 +178,17 @@ impl Host {
         self.next.schedule(when);
     }
     fn create(&mut self, event_loop: &ActiveEventLoop) -> Result<()> {
+        let icon =
+            image::load_from_memory(include_bytes!("../assets/ScreenRecorder.png"))?.into_rgba8();
+        let icon =
+            winit::window::Icon::from_rgba(icon.as_raw().clone(), icon.width(), icon.height())?;
         let window = Arc::new(
             event_loop.create_window(
                 Window::default_attributes()
                     .with_title(&self.title)
                     .with_visible(false)
                     .with_active(self.active)
+                    .with_window_icon(Some(icon))
                     .with_inner_size(winit::dpi::LogicalSize::new(1120.0, 800.0))
                     .with_min_inner_size(winit::dpi::LogicalSize::new(880.0, 650.0)),
             )?,

@@ -1,8 +1,8 @@
-use crate::theme;
+use crate::ui::Icon;
+use crate::{theme, ui as controls};
 mod diagnostics;
 mod review;
 pub(crate) use diagnostics::run as diagnose_render;
-use egui::{self, RichText};
 pub(crate) use review::run as render_review;
 use screen_recorder::{
     capture::{self, Target},
@@ -59,6 +59,7 @@ enum Busy {
 
 pub struct RecorderApp {
     isolated: bool,
+    owner: isize,
     settings: Settings,
     settings_path: PathBuf,
     tab: Tab,
@@ -115,7 +116,7 @@ fn recording_name() -> String {
 }
 
 impl RecorderApp {
-    pub fn new(ctx: &egui::Context) -> Self {
+    pub fn new(ctx: &egui::Context, owner: isize) -> Self {
         theme::apply(ctx);
         let settings_path = settings::directory().join("settings.json");
         let (mut settings, error) = match Settings::load(&settings_path) {
@@ -147,6 +148,7 @@ impl RecorderApp {
             .and_then(|_| std::fs::read_to_string(&update_error_path).ok());
         let mut app = Self {
             isolated: false,
+            owner,
             settings,
             settings_path,
             tab: Tab::Record,
@@ -164,7 +166,7 @@ impl RecorderApp {
             preview: None,
             preview_dirty: false,
             preview_generation: 0,
-            status: "Ready · no capture is active".into(),
+            status: "Ready to record".into(),
             error: error.or(previous_update_error.map(|e| format!("Previous update failed: {e}"))),
             busy: Busy::Idle,
             worker: None,
@@ -597,104 +599,160 @@ impl RecorderApp {
     }
 
     fn record_ui(&mut self, ui: &mut egui::Ui) {
-        ui.heading("Make the next step easy to follow");
-        ui.label("Choose exactly what to record. Add focus and cursor effects afterwards.");
-        ui.add_space(10.0);
+        ui.heading("New recording");
+        ui.label(
+            egui::RichText::new("Choose your canvas. Add sound if you need it.")
+                .color(theme::SECONDARY),
+        );
+        ui.add_space(12.0);
         let editable = self.can_start();
-        theme::panel(ui).show(ui,|ui| {
-            ui.strong("01   Capture source");
-            ui.add_enabled_ui(editable,|ui| {
-                ui.horizontal(|ui| {
-                    for (i,label) in ["Display","Window","Region"].iter().enumerate() {
-                        if ui.selectable_value(&mut self.source_mode,i,*label).changed() {self.selected_source=0;}
-                    }
-                    if ui.button("Refresh sources").clicked() {self.refresh_sources(ui.ctx());}
-                });
-                if self.source_mode==2 {
-                    ui.horizontal(|ui| {
-                        for (label,n) in [("Left",&mut self.region.0),("Top",&mut self.region.1)] {
-                            ui.label(label);ui.add(egui::DragValue::new(n).range(-32768..=32768));
+        theme::panel(ui).show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            ui.strong("What would you like to record?");
+            ui.add_enabled_ui(editable, |ui| {
+                ui.horizontal_wrapped(|ui| {
+                    for (index, label, icon) in [
+                        (0, "Display", Icon::Display),
+                        (1, "Window", Icon::Window),
+                        (2, "Region", Icon::Region),
+                    ] {
+                        if controls::choice(ui, icon, label, self.source_mode == index, 124.)
+                            .clicked()
+                        {
+                            self.source_mode = index;
+                            self.selected_source = 0;
                         }
-                        ui.label("Width");ui.add(egui::DragValue::new(&mut self.region.2).range(64..=4096));
-                        ui.label("Height");ui.add(egui::DragValue::new(&mut self.region.3).range(64..=2160));
+                    }
+                    if ui.button("Refresh sources").clicked() {
+                        self.refresh_sources(ui.ctx());
+                    }
+                });
+                if self.source_mode == 2 {
+                    ui.horizontal_wrapped(|ui| {
+                        for (label, n) in
+                            [("Left", &mut self.region.0), ("Top", &mut self.region.1)]
+                        {
+                            ui.label(label);
+                            ui.add(egui::DragValue::new(n).range(-32768..=32768));
+                        }
+                        ui.label("Width");
+                        ui.add(egui::DragValue::new(&mut self.region.2).range(64..=4096));
+                        ui.label("Height");
+                        ui.add(egui::DragValue::new(&mut self.region.3).range(64..=2160));
                     });
-                    ui.small("Region coordinates use physical pixels in the virtual desktop. Negative origins are supported.");
+                    ui.small("Physical pixels; negative positions are supported.");
                 } else {
-                    egui::ComboBox::from_id_salt("source").width(650.0)
-                        .selected_text(self.selected_target().map_or("Refresh sources, then select…".into(),|t|t.label()))
-                        .show_ui(ui,|ui| {
-                            for (index,t) in self.sources.iter().filter(|t|matches!((self.source_mode,t),(0,Target::Display{..})|(1,Target::Window{..}))).enumerate() {
-                                ui.selectable_value(&mut self.selected_source,index,t.label());
+                    egui::ComboBox::from_id_salt("source")
+                        .width(ui.available_width())
+                        .selected_text(
+                            self.selected_target()
+                                .map_or("Refresh to find a display or window".into(), |t| {
+                                    t.label()
+                                }),
+                        )
+                        .show_ui(ui, |ui| {
+                            for (index, t) in self
+                                .sources
+                                .iter()
+                                .filter(|t| {
+                                    matches!(
+                                        (self.source_mode, t),
+                                        (0, Target::Display { .. }) | (1, Target::Window { .. })
+                                    )
+                                })
+                                .enumerate()
+                            {
+                                ui.selectable_value(&mut self.selected_source, index, t.label());
                             }
                         });
                 }
-                if self.source_mode==1{ui.small("Keep this window visible and unoccluded. Resizing or minimizing stops recording.");}
+                if self.source_mode == 1 {
+                    ui.small(
+                        "Keep the selected window visible. Resizing or minimizing ends recording.",
+                    );
+                }
             });
         });
-        ui.add_space(8.0);
-        ui.strong("02   Sound");
+        ui.add_space(8.);
+        ui.strong("Sound");
         ui.add_enabled_ui(editable, |ui| {
-            ui.horizontal_wrapped(|ui| {
-                ui.checkbox(&mut self.settings.microphone, "Microphone")
-                    .on_hover_text("Record the default Windows microphone after Start");
-                ui.checkbox(&mut self.settings.system_audio, "System sound")
-                    .on_hover_text("Record everything playing on the default Windows output");
+            ui.columns(2, |columns| {
+                controls::toggle(
+                    &mut columns[0],
+                    &mut self.settings.microphone,
+                    Icon::Mic,
+                    "Microphone",
+                    "Your default input",
+                );
+                controls::toggle(
+                    &mut columns[1],
+                    &mut self.settings.system_audio,
+                    Icon::Sound,
+                    "System sound",
+                    "Audio playing on your PC",
+                );
             });
             ui.small(if self.settings.microphone || self.settings.system_audio {
-                "Uses your default Windows devices. Nothing is recorded until Start."
+                "Sound starts only when you press Record."
             } else {
-                "Both off: this recording will be silent."
+                "Sound is off. Your recording will be silent."
             });
         });
-        ui.separator();
-        ui.strong("03   Save recording");
-        ui.add_enabled_ui(editable, |ui| {
-            ui.label("Output folder");
-            ui.add(
-                egui::TextEdit::singleline(&mut self.settings.output_folder)
-                    .desired_width(f32::INFINITY),
-            );
-            ui.collapsing("Filename and frame rate", |ui| {
-                ui.horizontal_wrapped(|ui| {
-                    ui.label("Filename");
-                    ui.text_edit_singleline(&mut self.recording_name);
-                    ui.label("FPS");
-                    ui.add(egui::DragValue::new(&mut self.settings.fps).range(5..=30));
+        ui.add_space(8.);
+        theme::panel(ui).show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            ui.horizontal(|ui| {
+                controls::section(ui, Icon::Folder, "Save to");
+                if ui.small_button("Choose folder…").clicked() && !self.isolated {
+                    match crate::dialogs::choose(self.owner, crate::dialogs::Kind::Folder) {
+                        Ok(Some(path)) => self.settings.output_folder = path,
+                        Ok(None) => {}
+                        Err(e) => self.error = Some(format!("{e:#}")),
+                    }
+                }
+            });
+            ui.add_enabled_ui(editable, |ui| {
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.settings.output_folder)
+                        .desired_width(f32::INFINITY),
+                );
+                ui.collapsing("Filename and quality", |ui| {
+                    ui.horizontal_wrapped(|ui| {
+                        ui.label("Filename");
+                        ui.text_edit_singleline(&mut self.recording_name);
+                        ui.label("Frames / sec");
+                        ui.add(egui::DragValue::new(&mut self.settings.fps).range(5..=30));
+                    });
                 });
             });
         });
-        ui.add_space(12.0);
-        ui.separator();
-        ui.strong("Continue an existing recording");
-        ui.horizontal(|ui| {
-            ui.add(
-                egui::TextEdit::singleline(&mut self.open_path)
-                    .hint_text("Absolute path to a .srec file")
-                    .desired_width(ui.available_width() - 145.0),
-            );
-            if ui
-                .add_enabled(editable, egui::Button::new("Open project"))
-                .clicked()
-            {
-                self.load_project(ui.ctx());
-            }
-        });
+        ui.add_space(8.);
     }
 
     fn record_controls_ui(&mut self, ui: &mut egui::Ui) {
         let editable = self.can_start();
         ui.add_space(6.0);
         ui.horizontal(|ui| {
-            let start = ui.add_enabled(
-                editable,
-                egui::Button::new(
-                    RichText::new("Start recording")
-                        .strong()
-                        .color(theme::ON_PRIMARY),
-                )
-                .fill(theme::PRIMARY),
-            );
+            let start = ui
+                .add_enabled_ui(editable, |ui| {
+                    controls::action(ui, Icon::Record, "Start recording", 190.)
+                })
+                .inner;
             remember_primary(&start);
+            if ui
+                .add_enabled(editable, egui::Button::new("Open recording…"))
+                .clicked()
+                && !self.isolated
+            {
+                match crate::dialogs::choose(self.owner, crate::dialogs::Kind::Project) {
+                    Ok(Some(path)) => {
+                        self.open_path = path;
+                        self.load_project(ui.ctx());
+                    }
+                    Ok(None) => {}
+                    Err(e) => self.error = Some(format!("{e:#}")),
+                }
+            }
             if start.clicked() {
                 self.start_recording(ui.ctx());
             }
@@ -739,70 +797,254 @@ impl RecorderApp {
                 project.duration()
             ));
         });
-        ui.columns(2,|columns| {
-            let ui=&mut columns[0];
-            theme::panel(ui).show(ui,|ui| {
+        ui.columns(2, |columns| {
+            let ui = &mut columns[0];
+            theme::panel(ui).show(ui, |ui| {
                 ui.strong("Preview");
-                if let Some(texture)=&self.preview {
-                    ui.add(egui::Image::new(texture).fit_to_exact_size(egui::vec2(ui.available_width(),ui.available_width()*project.height as f32/project.width as f32)).sense(egui::Sense::click()))
-                        .on_hover_text("Scrub the timeline to inspect the edited output");
-                } else {ui.add_space(100.0);ui.label("Preparing preview…");ui.add_space(100.0);}
-                changed|=ui.add_enabled_ui(can_edit,|ui|theme::slider(ui,egui::Slider::new(&mut self.playhead,0.0..=project.duration()).text("seconds").fixed_decimals(2))).inner.changed();
-                ui.small("Preview and export use the same effects. Source frames remain unchanged.");
+                if let Some(texture) = &self.preview {
+                    ui.add(
+                        egui::Image::new(texture)
+                            .fit_to_exact_size(egui::vec2(
+                                ui.available_width(),
+                                ui.available_width() * project.height as f32 / project.width as f32,
+                            ))
+                            .sense(egui::Sense::click()),
+                    )
+                    .on_hover_text("Scrub the timeline to inspect the edited output");
+                } else {
+                    ui.add_space(100.0);
+                    ui.label("Preparing preview…");
+                    ui.add_space(100.0);
+                }
+                changed |= ui
+                    .add_enabled_ui(can_edit, |ui| {
+                        theme::slider(
+                            ui,
+                            egui::Slider::new(&mut self.playhead, 0.0..=project.duration())
+                                .text("seconds")
+                                .fixed_decimals(2),
+                        )
+                    })
+                    .inner
+                    .changed();
+                ui.small("Drag the timeline to preview your edits.");
             });
-            let ui=&mut columns[1];
-            ui.add_enabled_ui(can_edit,|ui| {
+            let ui = &mut columns[1];
+            ui.add_enabled_ui(can_edit, |ui| {
                 ui.strong("Trim range");
-                ui.horizontal(|ui| {
-                    ui.label("In");changed|=ui.add(egui::DragValue::new(&mut edit.trim_start).speed(0.05).range(0.0..=project.duration())).changed();
-                    if ui.small_button("Set at playhead").clicked(){edit.trim_start=self.playhead;changed=true;}
+                ui.horizontal_wrapped(|ui| {
+                    ui.label("In");
+                    changed |= ui
+                        .add(
+                            egui::DragValue::new(&mut edit.trim_start)
+                                .speed(0.05)
+                                .range(0.0..=project.duration()),
+                        )
+                        .changed();
+                    ui.label("Out");
+                    changed |= ui
+                        .add(
+                            egui::DragValue::new(&mut edit.trim_end)
+                                .speed(0.05)
+                                .range(0.0..=project.duration()),
+                        )
+                        .changed();
                 });
-                ui.horizontal(|ui| {
-                    ui.label("Out");changed|=ui.add(egui::DragValue::new(&mut edit.trim_end).speed(0.05).range(0.0..=project.duration())).changed();
-                    if ui.small_button("Set at playhead").clicked(){edit.trim_end=self.playhead;changed=true;}
+                ui.horizontal_wrapped(|ui| {
+                    if ui.small_button("In at playhead").clicked() {
+                        edit.trim_start = self.playhead;
+                        changed = true;
+                    }
+                    if ui.small_button("Out at playhead").clicked() {
+                        edit.trim_end = self.playhead;
+                        changed = true;
+                    }
                 });
-                ui.separator();ui.strong("Cursor and focus");
-                changed|=ui.checkbox(&mut edit.show_cursor,"Draw tutorial cursor").changed();
-                changed|=ui.checkbox(&mut edit.highlight,"Highlight cursor").changed();
-                changed|=ui.checkbox(&mut edit.clicks,"Emphasize clicks").changed();
-                changed|=ui.checkbox(&mut edit.automatic_zoom,"Automatic zoom around clicks").changed();
-                ui.small("Automatic zoom uses 1.8× with smooth entry and exit. Manual segments override it.");
-                ui.separator();ui.strong("Sound");
-                if !self.export_mp4{ui.small("AVI exports are silent. Choose MP4 below to include sound.");}
-                else if project.audio_tracks.is_empty(){ui.small("This recording has no audio tracks.");}
-                else{
-                    ui.checkbox(&mut edit.include_audio,"Include recorded sound");
-                    if edit.include_audio{ui.collapsing("Adjust mix",|ui|{
-                        for track in &project.audio_tracks{match track.kind{
-                            screen_recorder::audio::Kind::Microphone=>{theme::slider(ui,egui::Slider::new(&mut edit.microphone_gain,0.0..=2.0).text("Microphone"));},
-                            screen_recorder::audio::Kind::System=>{theme::slider(ui,egui::Slider::new(&mut edit.system_gain,0.0..=2.0).text("System sound"));},
-                        }}
-                        ui.small("Two tracks mix at half gain each. Preview does not play sound.");
-                    });}
-                }
-                ui.collapsing("Manual zoom adjustments",|ui|{
-                if ui.button("Add zoom at playhead").clicked() && self.playhead<project.duration() && edit.zooms.len()<2000 {
-                    let cursor=project.frames[project.index_at(self.playhead)].cursor;
-                    edit.zooms.push(Zoom{start:self.playhead,end:(self.playhead+2.0).min(project.duration()),x:cursor.x,y:cursor.y,scale:1.8});changed=true;
-                }
-                egui::ScrollArea::vertical().max_height(175.0).id_salt("zooms").show(ui,|ui| {
-                    let mut remove=None;
-                    for (i,zoom) in edit.zooms.iter_mut().enumerate() {
-                        ui.push_id(i,|ui| {
-                            ui.horizontal(|ui| {ui.strong(format!("Zoom {}",i+1));if ui.small_button("Remove").clicked(){remove=Some(i);}});
-                            ui.horizontal(|ui| {
-                                ui.label("In/out");changed|=ui.add(egui::DragValue::new(&mut zoom.start).speed(0.05).range(0.0..=project.duration())).changed();
-                                changed|=ui.add(egui::DragValue::new(&mut zoom.end).speed(0.05).range(0.0..=project.duration())).changed();
-                                ui.label("×");changed|=ui.add(egui::DragValue::new(&mut zoom.scale).speed(0.05).range(1.0..=3.0)).changed();
-                            });
-                            ui.horizontal(|ui| {ui.label("Focus X/Y");
-                                changed|=ui.add(egui::DragValue::new(&mut zoom.x).speed(0.01).range(0.0..=1.0)).changed();
-                                changed|=ui.add(egui::DragValue::new(&mut zoom.y).speed(0.01).range(0.0..=1.0)).changed();
-                            });
+                ui.separator();
+                ui.strong("Choose a style");
+                let clean =
+                    edit.show_cursor && !edit.highlight && !edit.clicks && !edit.automatic_zoom;
+                let guided =
+                    edit.show_cursor && edit.highlight && edit.clicks && !edit.automatic_zoom;
+                let focus =
+                    edit.show_cursor && edit.highlight && edit.clicks && edit.automatic_zoom;
+                let width = (ui.available_width() - 16.) / 3.;
+                ui.horizontal(|ui| {
+                    for (label, icon, selected, highlight, zoom) in [
+                        ("Clean", Icon::Cursor, clean, false, false),
+                        ("Guided", Icon::Click, guided, true, false),
+                        ("Focus", Icon::Zoom, focus, true, true),
+                    ] {
+                        if controls::choice(ui, icon, label, selected, width).clicked() && !selected
+                        {
+                            edit.show_cursor = true;
+                            edit.highlight = highlight;
+                            edit.clicks = highlight;
+                            edit.automatic_zoom = zoom;
+                            changed = true;
+                        }
+                    }
+                });
+                ui.small(if focus {
+                    "Cursor emphasis with automatic zoom."
+                } else if guided {
+                    "Highlight the cursor and emphasize each click."
+                } else if clean {
+                    "Just your recording and a clean cursor."
+                } else {
+                    "Custom cursor and zoom settings."
+                });
+                ui.collapsing("Customize effects", |ui| {
+                    changed |= controls::toggle(
+                        ui,
+                        &mut edit.show_cursor,
+                        Icon::Cursor,
+                        "Tutorial cursor",
+                        "A clear, consistent pointer",
+                    )
+                    .changed();
+                    changed |= controls::toggle(
+                        ui,
+                        &mut edit.highlight,
+                        Icon::Cursor,
+                        "Cursor highlight",
+                        "Keep the pointer easy to follow",
+                    )
+                    .changed();
+                    changed |= controls::toggle(
+                        ui,
+                        &mut edit.clicks,
+                        Icon::Click,
+                        "Click emphasis",
+                        "Show where each click happens",
+                    )
+                    .changed();
+                    changed |= controls::toggle(
+                        ui,
+                        &mut edit.automatic_zoom,
+                        Icon::Zoom,
+                        "Auto zoom",
+                        "Focus smoothly around clicks",
+                    )
+                    .changed();
+                });
+                ui.separator();
+                ui.strong("Sound");
+                if !self.export_mp4 {
+                    ui.small("AVI exports are silent. Choose MP4 below to include sound.");
+                } else if project.audio_tracks.is_empty() {
+                    ui.small("This recording has no audio tracks.");
+                } else {
+                    controls::toggle(
+                        ui,
+                        &mut edit.include_audio,
+                        Icon::Sound,
+                        "Recorded sound",
+                        "Include sound in your video",
+                    );
+                    if edit.include_audio {
+                        ui.collapsing("Sound levels", |ui| {
+                            for track in &project.audio_tracks {
+                                match track.kind {
+                                    screen_recorder::audio::Kind::Microphone => {
+                                        theme::slider(
+                                            ui,
+                                            egui::Slider::new(&mut edit.microphone_gain, 0.0..=2.0)
+                                                .text("Microphone"),
+                                        );
+                                    }
+                                    screen_recorder::audio::Kind::System => {
+                                        theme::slider(
+                                            ui,
+                                            egui::Slider::new(&mut edit.system_gain, 0.0..=2.0)
+                                                .text("System sound"),
+                                        );
+                                    }
+                                }
+                            }
+                            ui.small(
+                                "Two tracks mix at half gain each. Preview does not play sound.",
+                            );
                         });
                     }
-                    if let Some(index)=remove {edit.zooms.remove(index);changed=true;}
-                });
+                }
+                ui.collapsing("Edit zoom timing", |ui| {
+                    if ui.button("Add zoom at playhead").clicked()
+                        && self.playhead < project.duration()
+                        && edit.zooms.len() < 2000
+                    {
+                        let cursor = project.frames[project.index_at(self.playhead)].cursor;
+                        edit.zooms.push(Zoom {
+                            start: self.playhead,
+                            end: (self.playhead + 2.0).min(project.duration()),
+                            x: cursor.x,
+                            y: cursor.y,
+                            scale: 1.8,
+                        });
+                        changed = true;
+                    }
+                    egui::ScrollArea::vertical()
+                        .max_height(175.0)
+                        .id_salt("zooms")
+                        .show(ui, |ui| {
+                            let mut remove = None;
+                            for (i, zoom) in edit.zooms.iter_mut().enumerate() {
+                                ui.push_id(i, |ui| {
+                                    ui.horizontal(|ui| {
+                                        ui.strong(format!("Zoom {}", i + 1));
+                                        if ui.small_button("Remove").clicked() {
+                                            remove = Some(i);
+                                        }
+                                    });
+                                    ui.horizontal(|ui| {
+                                        ui.label("In/out");
+                                        changed |= ui
+                                            .add(
+                                                egui::DragValue::new(&mut zoom.start)
+                                                    .speed(0.05)
+                                                    .range(0.0..=project.duration()),
+                                            )
+                                            .changed();
+                                        changed |= ui
+                                            .add(
+                                                egui::DragValue::new(&mut zoom.end)
+                                                    .speed(0.05)
+                                                    .range(0.0..=project.duration()),
+                                            )
+                                            .changed();
+                                        ui.label("×");
+                                        changed |= ui
+                                            .add(
+                                                egui::DragValue::new(&mut zoom.scale)
+                                                    .speed(0.05)
+                                                    .range(1.0..=3.0),
+                                            )
+                                            .changed();
+                                    });
+                                    ui.horizontal(|ui| {
+                                        ui.label("Focus X/Y");
+                                        changed |= ui
+                                            .add(
+                                                egui::DragValue::new(&mut zoom.x)
+                                                    .speed(0.01)
+                                                    .range(0.0..=1.0),
+                                            )
+                                            .changed();
+                                        changed |= ui
+                                            .add(
+                                                egui::DragValue::new(&mut zoom.y)
+                                                    .speed(0.01)
+                                                    .range(0.0..=1.0),
+                                            )
+                                            .changed();
+                                    });
+                                });
+                            }
+                            if let Some(index) = remove {
+                                edit.zooms.remove(index);
+                                changed = true;
+                            }
+                        });
                 });
             });
         });
@@ -822,9 +1064,9 @@ impl RecorderApp {
             ui.strong("Export");
             let old = self.export_mp4;
             ui.add_enabled_ui(can_edit, |ui| {
-                ui.radio_value(&mut self.export_mp4, true, "MP4 · H.264 + AAC")
+                ui.selectable_value(&mut self.export_mp4, true, "MP4 video")
                     .on_hover_text("Video with recorded sound; odd dimensions pad to even pixels");
-                ui.radio_value(&mut self.export_mp4, false, "AVI · silent MJPEG")
+                ui.selectable_value(&mut self.export_mp4, false, "AVI · no sound")
                     .on_hover_text("Silent video, limited to 2 GB per export");
             });
             if old != self.export_mp4 {
@@ -839,11 +1081,11 @@ impl RecorderApp {
             egui::TextEdit::singleline(&mut self.export_path).desired_width(f32::INFINITY),
         );
         ui.horizontal_wrapped(|ui| {
-            let export = ui.add_enabled(
-                self.can_start(),
-                egui::Button::new(RichText::new("Export video").color(theme::ON_PRIMARY))
-                    .fill(theme::PRIMARY),
-            );
+            let export = ui
+                .add_enabled_ui(self.can_start(), |ui| {
+                    controls::action(ui, Icon::Export, "Export video", 174.)
+                })
+                .inner;
             remember_primary(&export);
             if export.clicked() {
                 self.start_export(ui.ctx());
@@ -869,58 +1111,106 @@ impl RecorderApp {
 
     fn settings_ui(&mut self, ui: &mut egui::Ui) {
         ui.heading("Settings");
-        ui.label(format!(
-            "ScreenRecorder {} · Windows x64 portable",
-            updater::VERSION
-        ));
-        ui.add_space(8.0);
-        theme::panel(ui).show(ui,|ui| {
-            ui.strong("Updates");
-            if ui.checkbox(&mut self.settings.startup_updates,"Check for updates on startup").changed()
-                && let Err(e)=self.settings.save(&self.settings_path) {
-                self.error=Some(format!("Startup preference could not be saved: {e:#}"));
+        ui.label(
+            egui::RichText::new(format!("ScreenRecorder {}", updater::VERSION))
+                .color(theme::SECONDARY),
+        );
+        ui.add_space(12.);
+        theme::panel(ui).show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            ui.strong("Recording defaults");
+            ui.horizontal(|ui| {
+                ui.label("Save recordings to");
+                if ui.small_button("Choose folder…").clicked() && !self.isolated {
+                    match crate::dialogs::choose(self.owner, crate::dialogs::Kind::Folder) {
+                        Ok(Some(path)) => self.settings.output_folder = path,
+                        Ok(None) => {}
+                        Err(e) => self.error = Some(format!("{e:#}")),
+                    }
+                }
+            });
+            ui.add(
+                egui::TextEdit::singleline(&mut self.settings.output_folder)
+                    .desired_width(f32::INFINITY),
+            );
+            ui.horizontal(|ui| {
+                ui.label("Frames per second");
+                ui.add(egui::DragValue::new(&mut self.settings.fps).range(5..=30));
+            });
+            ui.columns(2, |columns| {
+                controls::toggle(
+                    &mut columns[0],
+                    &mut self.settings.microphone,
+                    Icon::Mic,
+                    "Microphone",
+                    "For new recordings",
+                );
+                controls::toggle(
+                    &mut columns[1],
+                    &mut self.settings.system_audio,
+                    Icon::Sound,
+                    "System sound",
+                    "For new recordings",
+                );
+            });
+            if ui.button("Save defaults").clicked() {
+                match self.settings.save(&self.settings_path) {
+                    Ok(()) => self.status = "Defaults saved".into(),
+                    Err(e) => self.error = Some(format!("{e:#}")),
+                }
             }
-            ui.small("Only checks release metadata. Download and installation require the action below.");
-            if ui.add_enabled(!self.update_busy,egui::Button::new("Check for updates")).clicked() {self.check_updates(ui.ctx());}
-            ui.label(&self.update_message);
-            if let Some(update)=&self.update {
-                ui.colored_label(theme::SUCCESS,format!("Available: {}",update.version));
-                if ui.add_enabled(self.can_start() && !self.update_busy,egui::Button::new("Download and install (restarts app)")).clicked() {self.install_update(ui.ctx());}
+        });
+        ui.add_space(8.);
+        theme::panel(ui).show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            ui.strong("Keep up to date");
+            if controls::toggle(
+                ui,
+                &mut self.settings.startup_updates,
+                Icon::Settings,
+                "Check on startup",
+                "Downloads always need your approval",
+            )
+            .changed()
+                && let Err(e) = self.settings.save(&self.settings_path)
+            {
+                self.error = Some(format!("Preference could not be saved: {e:#}"));
             }
-            if self.installing && ui.button("Cancel download").clicked() {self.cancel.store(true,Ordering::Relaxed);}
+            ui.horizontal_wrapped(|ui| {
+                if ui
+                    .add_enabled(!self.update_busy, egui::Button::new("Check for updates"))
+                    .clicked()
+                {
+                    self.check_updates(ui.ctx());
+                }
+                ui.label(&self.update_message);
+            });
+            if let Some(update) = &self.update {
+                ui.colored_label(
+                    theme::SUCCESS,
+                    format!("Version {} is available", update.version),
+                );
+                if ui
+                    .add_enabled(
+                        self.can_start() && !self.update_busy,
+                        egui::Button::new("Download and install (restarts app)"),
+                    )
+                    .clicked()
+                {
+                    self.install_update(ui.ctx());
+                }
+            }
+            if self.installing && ui.button("Cancel download").clicked() {
+                self.cancel.store(true, Ordering::Relaxed);
+            }
+        });
+        ui.add_space(8.);
+        ui.collapsing("About and recording support",|ui| {
+            ui.label("Records visible displays, windows or regions. Exports MP4 with sound or silent AVI.");
+            ui.small("No webcam or hidden-window capture. Keep the selected window visible.");
             ui.small(updater::REPOSITORY);
-            ui.small("The planned repository is not yet published. An unavailable release is reported as an error, never as up to date.");
+            ui.small(format!("Settings: {}",self.settings_path.display()));
         });
-        ui.add_space(10.0);
-        ui.strong("Recording defaults");
-        ui.label("Default output folder");
-        ui.add(
-            egui::TextEdit::singleline(&mut self.settings.output_folder)
-                .desired_width(f32::INFINITY),
-        );
-        ui.horizontal(|ui| {
-            ui.label("Frames per second");
-            ui.add(egui::DragValue::new(&mut self.settings.fps).range(5..=30));
-        });
-        ui.checkbox(
-            &mut self.settings.microphone,
-            "Microphone on for new recordings",
-        );
-        ui.checkbox(
-            &mut self.settings.system_audio,
-            "System sound on for new recordings",
-        );
-        if ui.button("Save defaults").clicked() {
-            match self.settings.save(&self.settings_path) {
-                Ok(()) => self.status = "Defaults saved".into(),
-                Err(e) => self.error = Some(format!("{e:#}")),
-            }
-        }
-        ui.small(format!("Settings: {}", self.settings_path.display()));
-        ui.separator();
-        ui.strong("Recording support");
-        ui.label("GDI visible-area capture; WASAPI microphone and system loopback; Media Foundation MP4/H.264/AAC or silent Motion JPEG AVI. No webcam, hidden-window or protected-content capture.");
-        ui.label("Device capture, desktop compatibility and update replacement require manual validation before a public release.");
     }
 }
 
@@ -954,94 +1244,99 @@ impl crate::host::Application for RecorderApp {
 impl RecorderApp {
     /// Shared by the real window and the isolated offscreen review. No second UI is built.
     fn show(&mut self, ui: &mut egui::Ui) {
-        egui::CentralPanel::default().show(ui, |ui| {
-            ui.horizontal_wrapped(|ui| {
-                ui.label(
-                    RichText::new("SCREEN / RECORDER")
-                        .size(23.0)
-                        .strong()
-                        .color(theme::ACCENT),
-                );
-                ui.add_space(22.0);
-                ui.selectable_value(&mut self.tab, Tab::Record, "Record");
-                ui.selectable_value(&mut self.tab, Tab::Edit, "Edit");
-                ui.selectable_value(&mut self.tab, Tab::Settings, "Settings");
-                if let Some(control) = &self.control {
-                    let (label, color) = if control.is_stopped() {
-                        ("FINALIZING", theme::WARNING)
-                    } else if !control.has_frames() {
-                        ("STARTING", theme::WARNING)
-                    } else if control.is_paused() {
-                        ("PAUSED", theme::WARNING)
-                    } else {
-                        ("RECORDING", theme::ERROR)
-                    };
-                    ui.colored_label(color, label);
-                    if self.tab != Tab::Record
-                        && ui
-                            .add_enabled(!control.is_stopped(), egui::Button::new("Stop"))
-                            .clicked()
-                    {
-                        control.stop();
+        egui::CentralPanel::default()
+            .frame(egui::Frame::new().fill(theme::BACKGROUND).inner_margin(20))
+            .show(ui, |ui| {
+                ui.horizontal_wrapped(|ui| {
+                    controls::brand(ui);
+                    ui.add_space(20.);
+                    for (tab, label, icon) in [
+                        (Tab::Record, "Record", Icon::Record),
+                        (Tab::Edit, "Edit", Icon::Edit),
+                        (Tab::Settings, "Settings", Icon::Settings),
+                    ] {
+                        if controls::nav(ui, icon, label, self.tab == tab, 112.).clicked() {
+                            self.tab = tab;
+                        }
                     }
-                }
-                if self.update.is_some() {
-                    ui.colored_label(theme::SUCCESS, "Update available");
-                }
-            });
-            ui.separator();
-            if let Some(error) = self.error.clone() {
-                theme::panel(ui).show(ui, |ui| {
-                    egui::ScrollArea::vertical()
-                        .id_salt("error-message")
-                        .max_height(88.0)
-                        .show(ui, |ui| {
-                            ui.colored_label(theme::ERROR, error);
-                        });
-                    if ui.small_button("Dismiss").clicked() {
-                        self.error = None;
+                    if let Some(control) = &self.control {
+                        let (label, color) = if control.is_stopped() {
+                            ("FINALIZING", theme::WARNING)
+                        } else if !control.has_frames() {
+                            ("STARTING", theme::WARNING)
+                        } else if control.is_paused() {
+                            ("PAUSED", theme::WARNING)
+                        } else {
+                            ("RECORDING", theme::ERROR)
+                        };
+                        ui.colored_label(color, label);
+                        if self.tab != Tab::Record
+                            && ui
+                                .add_enabled(!control.is_stopped(), egui::Button::new("Stop"))
+                                .clicked()
+                        {
+                            control.stop();
+                        }
+                    }
+                    if self.update.is_some() {
+                        ui.colored_label(theme::SUCCESS, "Update available");
                     }
                 });
-            }
-            let footer_height = match self.tab {
-                Tab::Record => 112.0,
-                Tab::Edit if self.project.is_some() => 184.0,
-                _ => 42.0,
-            };
-            let body_height = (ui.available_height() - footer_height).max(64.0);
-            let body = egui::ScrollArea::vertical()
-                .id_salt(match self.tab {
-                    Tab::Record => "record-body",
-                    Tab::Edit => "edit-body",
-                    Tab::Settings => "settings-body",
-                })
-                .max_height(body_height)
-                .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::VisibleWhenNeeded)
-                .auto_shrink([false, false])
-                .show(ui, |ui| match self.tab {
-                    Tab::Record => self.record_ui(ui),
-                    Tab::Edit => self.edit_ui(ui),
-                    Tab::Settings => self.settings_ui(ui),
+                ui.separator();
+                if let Some(error) = self.error.clone() {
+                    theme::panel(ui).show(ui, |ui| {
+                        egui::ScrollArea::vertical()
+                            .id_salt("error-message")
+                            .max_height(88.0)
+                            .show(ui, |ui| {
+                                ui.colored_label(theme::ERROR, error);
+                            });
+                        if ui.small_button("Dismiss").clicked() {
+                            self.error = None;
+                        }
+                    });
+                }
+                let footer_height = match self.tab {
+                    Tab::Record => 132.0,
+                    Tab::Edit if self.project.is_some() => 184.0,
+                    _ => 42.0,
+                };
+                let body_height = (ui.available_height() - footer_height).max(64.0);
+                let body = egui::ScrollArea::vertical()
+                    .id_salt(match self.tab {
+                        Tab::Record => "record-body",
+                        Tab::Edit => "edit-body",
+                        Tab::Settings => "settings-body",
+                    })
+                    .max_height(body_height)
+                    .scroll_bar_visibility(
+                        egui::scroll_area::ScrollBarVisibility::VisibleWhenNeeded,
+                    )
+                    .auto_shrink([false, false])
+                    .show(ui, |ui| match self.tab {
+                        Tab::Record => self.record_ui(ui),
+                        Tab::Edit => self.edit_ui(ui),
+                        Tab::Settings => self.settings_ui(ui),
+                    });
+                ui.ctx().data_mut(|data| {
+                    data.insert_temp(
+                        egui::Id::unique(BODY_SCROLL_METRICS),
+                        [
+                            body.content_size.x,
+                            body.content_size.y,
+                            body.inner_rect.width(),
+                            body.inner_rect.height(),
+                        ],
+                    )
                 });
-            ui.ctx().data_mut(|data| {
-                data.insert_temp(
-                    egui::Id::unique(BODY_SCROLL_METRICS),
-                    [
-                        body.content_size.x,
-                        body.content_size.y,
-                        body.inner_rect.width(),
-                        body.inner_rect.height(),
-                    ],
-                )
+                match self.tab {
+                    Tab::Record => self.record_controls_ui(ui),
+                    Tab::Edit => self.export_controls_ui(ui),
+                    Tab::Settings => {}
+                }
+                ui.separator();
+                ui.add(egui::Label::new(&self.status).truncate())
+                    .on_hover_text(&self.status);
             });
-            match self.tab {
-                Tab::Record => self.record_controls_ui(ui),
-                Tab::Edit => self.export_controls_ui(ui),
-                Tab::Settings => {}
-            }
-            ui.separator();
-            ui.add(egui::Label::new(&self.status).truncate())
-                .on_hover_text(&self.status);
-        });
     }
 }

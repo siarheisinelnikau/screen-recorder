@@ -204,6 +204,26 @@ fn phase(
     Ok(result)
 }
 
+fn isolate_input(window: &winit::window::Window) -> Result<()> {
+    #[cfg(windows)]
+    {
+        use windows_sys::Win32::UI::Input::KeyboardAndMouse::{EnableWindow, IsWindowEnabled};
+        use winit::raw_window_handle::{HasWindowHandle, RawWindowHandle};
+        let RawWindowHandle::Win32(handle) = window.window_handle()?.as_raw() else {
+            anyhow::bail!("Expected a Win32 diagnostic window");
+        };
+        let hwnd = handle.hwnd.get() as *mut _;
+        unsafe {
+            EnableWindow(hwnd, 0);
+            ensure!(
+                IsWindowEnabled(hwnd) == 0,
+                "Cannot isolate diagnostic window input"
+            );
+        }
+    }
+    Ok(())
+}
+
 struct DiagnosticApp {
     inner: RecorderApp,
     state: Arc<State>,
@@ -213,7 +233,7 @@ struct DiagnosticApp {
 impl DiagnosticApp {
     fn new(ctx: &egui::Context, window: Arc<winit::window::Window>, root: PathBuf) -> Result<Self> {
         let inner = review::native_fixture(ctx, &root)?;
-        let backend = json!({"path":"egui 0.37 -> egui_software_backend 0.0.2 CPU rasterizer -> softbuffer 0.4.8 Win32 CreateDIBSection / BitBlt", "renderer":"CPU / Windows GDI", "gpu_context":false});
+        let backend = json!({"path":"egui 0.37 -> egui_software_backend 0.0.2 CPU rasterizer -> softbuffer 0.4.8 Win32 CreateDIBSection / BitBlt", "renderer":"CPU / Windows GDI", "gpu_context":false,"diagnostic_input_disabled":true});
         let state = Arc::new(State {
             report: Mutex::new(
                 json!({"version":updater::VERSION,"backend":backend,"phases":[],"interrupted_intervals":[],"isolation":"synthetic fixtures; recording/export/update dispatch disabled; no normal settings or audio endpoints","complete":false}),
@@ -230,7 +250,9 @@ impl DiagnosticApp {
         let worker = std::thread::spawn(move || {
             let result = (|| -> Result<()> {
                 let deadline = Instant::now() + Duration::from_secs(32);
-                wait(&shared, 2000)?;
+                wait(&shared, 100)?;
+                isolate_input(&window)?;
+                wait(&shared, 1900)?;
                 ensure!(
                     host::snapshot().present.count > 0,
                     "The main renderer did not present a frame during warmup"
@@ -253,6 +275,8 @@ impl DiagnosticApp {
                 let before_minimize = sample(&shared)?;
                 window.set_minimized(true);
                 wait(&shared, 750)?;
+                isolate_input(&window)?;
+                wait(&shared, 250)?;
                 shared.report.lock().unwrap()["minimize_transition"] =
                     delta(&before_minimize, &sample(&shared)?);
                 phase(&shared, "minimized_idle", true, deadline, || {
@@ -262,6 +286,8 @@ impl DiagnosticApp {
                 window.set_minimized(false);
                 ctx.request_repaint();
                 wait(&shared, 750)?;
+                isolate_input(&window)?;
+                wait(&shared, 250)?;
                 let after_restore = sample(&shared)?;
                 shared.report.lock().unwrap()["restore_transition"] =
                     delta(&before_restore, &after_restore);
