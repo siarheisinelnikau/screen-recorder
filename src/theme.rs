@@ -1,4 +1,4 @@
-//! Shared visual roles. No timers, platform access or rendering is performed here.
+//! Shared visual roles and installed Windows typography; no recurring work.
 use egui::{self, Color32, FontId, TextStyle};
 pub const BACKGROUND: Color32 = Color32::from_rgb(244, 246, 249);
 pub const SURFACE: Color32 = Color32::WHITE;
@@ -6,7 +6,6 @@ pub const TEXT: Color32 = Color32::from_rgb(29, 37, 51);
 pub const SECONDARY: Color32 = Color32::from_rgb(91, 104, 123);
 pub const BORDER: Color32 = Color32::from_rgb(206, 214, 226);
 pub const CONTROL_TRACK: Color32 = Color32::from_rgb(128, 141, 162);
-pub const ACCENT: Color32 = Color32::from_rgb(38, 57, 91);
 pub const PRIMARY: Color32 = Color32::from_rgb(49, 84, 220);
 pub const ON_PRIMARY: Color32 = Color32::WHITE;
 pub const SELECTION: Color32 = Color32::from_rgb(226, 234, 255);
@@ -14,7 +13,10 @@ pub const WARNING: Color32 = Color32::from_rgb(139, 86, 10);
 pub const ERROR: Color32 = Color32::from_rgb(179, 36, 63);
 pub const SUCCESS: Color32 = Color32::from_rgb(28, 112, 78);
 pub fn panel(ui: &egui::Ui) -> egui::Frame {
-    egui::Frame::group(ui.style()).fill(SURFACE)
+    egui::Frame::group(ui.style())
+        .fill(SURFACE)
+        .corner_radius(12)
+        .inner_margin(16)
 }
 pub fn slider(ui: &mut egui::Ui, slider: egui::Slider<'_>) -> egui::Response {
     ui.scope(|ui| {
@@ -24,6 +26,21 @@ pub fn slider(ui: &mut egui::Ui, slider: egui::Slider<'_>) -> egui::Response {
     .inner
 }
 pub fn apply(ctx: &egui::Context) {
+    // Use OS-installed fonts without redistributing proprietary font files.
+    #[cfg(windows)]
+    if let Ok(font) = std::fs::read("C:/Windows/Fonts/segoeui.ttf") {
+        let mut fonts = egui::FontDefinitions::default();
+        fonts.font_data.insert(
+            "system-ui".into(),
+            std::sync::Arc::new(egui::FontData::from_owned(font)),
+        );
+        fonts
+            .families
+            .get_mut(&egui::FontFamily::Proportional)
+            .unwrap()
+            .insert(0, "system-ui".into());
+        ctx.set_fonts(fonts);
+    }
     ctx.set_theme(egui::ThemePreference::Light);
     ctx.set_visuals(egui::Visuals::light());
     ctx.style_mut_of(egui::Theme::Light, |style| {
@@ -35,7 +52,7 @@ pub fn apply(ctx: &egui::Context) {
         style.spacing.scroll.foreground_color = true;
         style
             .text_styles
-            .insert(TextStyle::Heading, FontId::proportional(22.0));
+            .insert(TextStyle::Heading, FontId::proportional(26.0));
         style
             .text_styles
             .insert(TextStyle::Body, FontId::proportional(15.0));

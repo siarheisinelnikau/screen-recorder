@@ -1,10 +1,12 @@
 #![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
 
 mod app;
+mod dialogs;
 mod host;
 mod raster;
 mod render_diagnostics;
 mod theme;
+mod ui;
 
 fn main() -> anyhow::Result<()> {
     // Parse before GUI construction, settings, updater helper or any capture startup.
@@ -43,6 +45,13 @@ fn main() -> anyhow::Result<()> {
     host::run(
         "ScreenRecorder",
         true,
-        Box::new(|ctx, _window| Ok(Box::new(app::RecorderApp::new(ctx)))),
+        Box::new(|ctx, window| {
+            use winit::raw_window_handle::{HasWindowHandle, RawWindowHandle};
+            let owner = match window.window_handle()?.as_raw() {
+                RawWindowHandle::Win32(h) => h.hwnd.get(),
+                _ => 0,
+            };
+            Ok(Box::new(app::RecorderApp::new(ctx, owner)))
+        }),
     )
 }

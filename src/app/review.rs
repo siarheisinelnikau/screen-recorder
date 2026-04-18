@@ -158,14 +158,14 @@ fn app(
     );
     let (tx, rx) = mpsc::sync_channel(8);
     Ok(RecorderApp{
-        isolated:true,
+        isolated:true,owner:0,
         settings:Settings{startup_updates:false,output_folder:root.join("Recordings").to_string_lossy().into_owned(),fps:15,microphone:true,system_audio:true},
         settings_path:root.join("settings.json"),tab:scene.tab,
         sources:vec![Target::Display{left:0,top:0,width:1920,height:1080,name:"Display 1 · 1920 × 1080 (synthetic fixture)".into()}],
         source_mode:0,selected_source:0,region:(100,100,1280,720),recording_name:"Tutorial.srec".into(),
         open_path:project.path.to_string_lossy().into_owned(),export_path:root.join("Tutorial-edited.mp4").to_string_lossy().into_owned(),export_mp4:true,
         project:Some(project),edit:Some(edit),playhead:time,preview:Some(texture),preview_dirty:false,preview_generation:0,
-        status:if scene.error{"Recording stopped. Completed frames have been retained."}else{"Ready · no capture is active"}.into(),
+        status:if scene.error{"Recording stopped. Completed frames have been retained."}else{"Ready to record"}.into(),
         error:scene.error.then(||"Microphone could not start. Check microphone access in Windows and choose a new recording filename. Completed video and audio packets remain available.".into()),
         busy:Busy::Idle,worker:None,control:None,cancel:Arc::new(AtomicBool::new(false)),tx,rx,
         update_worker:None,update_busy:false,update:None,update_message:"No check performed".into(),installing:false,closing:false,
@@ -211,7 +211,7 @@ pub(crate) fn run(root: &Path) -> Result<()> {
                 .get_mut(&egui::ViewportId::ROOT)
                 .unwrap()
                 .native_pixels_per_point = Some(scene.scale);
-            let output = ctx.run_ui(input, |ui| app.show(ui));
+            let mut output = ctx.run_ui(input, |ui| app.show(ui));
             ensure!(
                 (output.pixels_per_point - scene.scale).abs() < 0.001,
                 "Unexpected render scale"
@@ -227,7 +227,7 @@ pub(crate) fn run(root: &Path) -> Result<()> {
             renderer.render(
                 &mut BufferMutRef::new(&mut buffer, width, height),
                 &primitives,
-                &textures(&output.textures_delta),
+                &textures(&mut output.textures_delta),
                 output.pixels_per_point,
             );
             ensure!(
