@@ -204,15 +204,11 @@ fn phase(
     Ok(result)
 }
 
-fn isolate_input(window: &winit::window::Window) -> Result<()> {
+fn isolate_input(owner: isize) -> Result<()> {
     #[cfg(windows)]
     {
         use windows_sys::Win32::UI::Input::KeyboardAndMouse::{EnableWindow, IsWindowEnabled};
-        use winit::raw_window_handle::{HasWindowHandle, RawWindowHandle};
-        let RawWindowHandle::Win32(handle) = window.window_handle()?.as_raw() else {
-            anyhow::bail!("Expected a Win32 diagnostic window");
-        };
-        let hwnd = handle.hwnd.get() as *mut _;
+        let hwnd = owner as *mut _;
         unsafe {
             EnableWindow(hwnd, 0);
             ensure!(
@@ -233,6 +229,14 @@ struct DiagnosticApp {
 impl DiagnosticApp {
     fn new(ctx: &egui::Context, window: Arc<winit::window::Window>, root: PathBuf) -> Result<Self> {
         let inner = review::native_fixture(ctx, &root)?;
+        // Obtain the native handle on its owning UI thread. The controller keeps
+        // the Arc<Window> alive and only changes this owned window's input state.
+        use winit::raw_window_handle::{HasWindowHandle, RawWindowHandle};
+        let owner = match window.window_handle()?.as_raw() {
+            RawWindowHandle::Win32(h) => h.hwnd.get(),
+            _ => 0,
+        };
+        ensure!(owner != 0, "Expected a Win32 diagnostic window");
         let backend = json!({"path":"egui 0.37 -> egui_software_backend 0.0.2 CPU rasterizer -> softbuffer 0.4.8 Win32 CreateDIBSection / BitBlt", "renderer":"CPU / Windows GDI", "gpu_context":false,"diagnostic_input_disabled":true});
         let state = Arc::new(State {
             report: Mutex::new(
@@ -251,7 +255,7 @@ impl DiagnosticApp {
             let result = (|| -> Result<()> {
                 let deadline = Instant::now() + Duration::from_secs(32);
                 wait(&shared, 100)?;
-                isolate_input(&window)?;
+                isolate_input(owner)?;
                 wait(&shared, 1900)?;
                 ensure!(
                     host::snapshot().present.count > 0,
@@ -275,7 +279,7 @@ impl DiagnosticApp {
                 let before_minimize = sample(&shared)?;
                 window.set_minimized(true);
                 wait(&shared, 750)?;
-                isolate_input(&window)?;
+                isolate_input(owner)?;
                 wait(&shared, 250)?;
                 shared.report.lock().unwrap()["minimize_transition"] =
                     delta(&before_minimize, &sample(&shared)?);
@@ -286,7 +290,7 @@ impl DiagnosticApp {
                 window.set_minimized(false);
                 ctx.request_repaint();
                 wait(&shared, 750)?;
-                isolate_input(&window)?;
+                isolate_input(owner)?;
                 wait(&shared, 250)?;
                 let after_restore = sample(&shared)?;
                 shared.report.lock().unwrap()["restore_transition"] =
