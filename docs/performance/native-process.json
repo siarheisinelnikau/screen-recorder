@@ -1,0 +1,20 @@
+{
+  "executable": "E:\\work\\github\\screen-recorder\\dist\\ScreenRecorder-v0.2.0.exe",
+  "pid": 44916,
+  "exit_code": 0,
+  "sampled_peak_working_set_bytes": 52273152,
+  "gpu_samples": [
+    {
+      "elapsed_ms": 5141,
+      "error": "Access to a CIM resource was not available to the client.",
+      "available": false
+    }
+  ],
+  "module_probe": {
+    "graphics_modules": [],
+    "scope": "Own diagnostic PID only; supporting evidence, not a standalone backend proof",
+    "available": true
+  },
+  "sha256": "d0e17dd6cefb4b13e4df0019a0cbdb203b9a9fa7690721954aaf53199d301809",
+  "elapsed_ms": 24636
+}

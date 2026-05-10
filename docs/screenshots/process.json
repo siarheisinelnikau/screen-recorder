@@ -1,0 +1,11 @@
+{
+  "executable": "E:\\work\\github\\screen-recorder\\dist\\ScreenRecorder-v0.2.0.exe",
+  "sha256": "d0e17dd6cefb4b13e4df0019a0cbdb203b9a9fa7690721954aaf53199d301809",
+  "pid": 6616,
+  "exit_code": 0,
+  "elapsed_ms": 634,
+  "cpu_ms": 250.0,
+  "cpu_percent_one_core": 39.43217665615142,
+  "sampled_peak_working_set_bytes": 37978112,
+  "scope": "Finite CPU offscreen capture only; no window or idle/hidden runtime verification"
+}

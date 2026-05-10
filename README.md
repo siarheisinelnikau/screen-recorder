@@ -2,7 +2,7 @@
 
 A Windows-first recorder for readable tutorials: capture a display, visible window or a precise region, then trim the clip and add cursor emphasis and smooth zoom. Independent MIT-licensed implementation, with original UI and code. Inspired by the workflow of [Screen Studio](https://screen.studio/); no affiliation or shared assets.
 
-**Version 0.2.0 adds WASAPI audio capture and native MP4 export.** Synthetic H.264/AAC encoding/decoding and finite CPU rendering of the actual UI components have been exercised without a window, capture or playback. Real desktop/audio capture, UI interaction, normal OpenGL/idle performance and updater replacement remain unverified.
+**Version 0.2.0 adds WASAPI audio capture, native MP4 export and a redesigned CPU/GDI interface.** Synthetic H.264/AAC encoding/decoding, six rendered UI views and a bounded native idle/minimized/restore check passed. Real desktop/audio capture, broad interactive compatibility and updater replacement remain unverified.
 
 ## Capabilities
 
@@ -20,14 +20,14 @@ No webcam, timeline/audio playback, hidden-window recording, HDR color managemen
 
 ## Use on Windows
 
-The package is **`ScreenRecorder-v0.2.0.exe`**, Windows x64. Build it below; no repository or release has been published by this session. Intended requirements: Windows 10/11 with Media Foundation/H.264/AAC and a working OpenGL desktop driver. Windows N installations need Media Feature Pack; this is not installed by the app. Actual clean-machine and hardware compatibility remain to be verified.
+The package is **`ScreenRecorder-v0.2.0.exe`**, Windows x64. Build it below; no repository or release has been published by this session. Intended requirements: Windows 10/11 with Media Foundation/H.264/AAC and Windows GDI desktop presentation. Windows N installations need Media Feature Pack; this is not installed by the app. Actual clean-machine and hardware compatibility remain to be verified.
 
 1. Launch the portable executable manually. In **Record**, select Display or Window and press **Refresh sources**, or enter a Region using physical pixels. Choose a source explicitly.
-2. Under **Sound**, opt into **Microphone**, **System sound**, both or neither. Both are off by default. Set an absolute output folder. The default filename is generated automatically; **Filename and frame rate** exposes those optional controls. The folder is created only after **Start recording**.
+2. Under **Sound**, opt into **Microphone**, **System sound**, both or neither. Both are off by default. Set an absolute output folder. Use **Choose folder…** or edit the path. The default filename is generated automatically; **Filename and quality** exposes those optional controls. The folder is created only after **Start recording**.
 3. Press **Start recording**. Pause and resume from the app. **Stop and save** or **Ctrl+Shift+F10** finalizes the project. Closing the app requests stop and waits for finalization.
-4. The saved project opens in **Edit**. Scrub the preview, set trim in/out and effects. **Manual zoom adjustments** exposes timing and normalized focus X/Y from 0 to 1; the first matching manual segment overrides automatic zoom. **Adjust mix** exposes gain only for tracks that exist. Preview does not play audio.
+4. The saved project opens in **Edit**. Scrub the preview, set trim in/out and choose **Clean**, **Guided** or **Focus**. **Customize effects** keeps the individual cursor/highlight/click/zoom controls available. **Edit zoom timing** exposes timing and normalized focus X/Y from 0 to 1; the first matching manual segment overrides automatic zoom. **Sound levels** exposes gain only for tracks that exist. Preview does not play audio.
 5. **Save edit decisions** writes a separate `.edit.json`; source media stays unchanged. Select MP4 or silent AVI, choose a new absolute destination matching that format, and press **Export video**. MP4 includes audio when **Include recorded sound** is selected. Export does not implicitly save edit decisions.
-6. To resume later, enter a `.srec` path under **Continue an existing recording** and press **Open project**. If an edit sidecar is malformed, correct or rename that sidecar before reopening; the source project is retained.
+6. To resume later, press **Open recording…** beside Start and choose a `.srec` project in the Windows file picker. If an edit sidecar is malformed, correct or rename that sidecar before reopening; the source project is retained.
 
 Keep the selected window visible and unoccluded. Window capture follows its visible screen rectangle, including its frame; it is not isolated window capture. Resizing, minimizing, closing, or moving any part outside the virtual desktop stops recording with a recoverable project. Display recording can include the recorder window; place the controls outside the selected region when needed. There is no hidden capture or global key logging. Cursor position and left-button state are sampled only during an explicitly started, unpaused recording; short clicks between samples may be missed. The stop key chord is also checked while paused.
 
@@ -45,7 +45,7 @@ MP4 uses the Windows software H.264 and AAC transforms with hardware transforms 
 
 ## Application-generated views
 
-These are real Record/Edit/Settings components rendered by the packaged EXE's bounded `--render-review` mode. They use synthetic media and selected sound options as fixtures; no window, desktop capture, audio device, network or computer use is involved. A CPU fallback rasterizes the actual egui 0.37 meshes/font textures. The normal OpenGL presenter, native window chrome and interactions are **not** verified by these images. New installations still leave both sound options off.
+These are real Record/Edit/Settings components rendered by the packaged EXE's bounded `--render-review` mode. They use synthetic media and selected sound options as fixtures; no window, desktop capture, audio device, network or computer use is involved. The same CPU rasterizer as the normal window draws the actual egui 0.37 meshes/font textures. Native GDI presentation, window chrome and interactions require separate evidence. New installations still leave both sound options off.
 
 ![Record view, actual application components with a synthetic source and both sound options selected](docs/screenshots/record.png)
 
@@ -53,7 +53,9 @@ These are real Record/Edit/Settings components rendered by the packaged EXE's bo
 
 ![Settings view, actual application components with isolated fixture preferences](docs/screenshots/settings.png)
 
-See [render review evidence](docs/RENDER_REVIEW.md) for the narrower/high-DPI/error views, defects found and the remaining desktop-rendering gate.
+The interface uses neutral light surfaces, labeled vector icons and compact sound switches. The normal window now uses CPU rasterization and Windows GDI. The [isolated native check](docs/RENDER_PERFORMANCE.md) completed visible/idle/minimized/restore with no idle frame generation; broader input/device checks remain pending.
+
+See [render review evidence](docs/RENDER_REVIEW.md) for the narrower/high-DPI/error views, defects found and the separate native rendering measurements.
 
 ## Build and safe verification
 
@@ -73,13 +75,16 @@ The optional fixture generator also never accesses a desktop or device:
 cargo run --offline --locked --example synthetic --jobs 2
 python .\scripts\inspect-fixtures.py
 python .\scripts\inspect-mp4.py
-python .\scripts\inspect-package.py # After packaging; reads headers/imports, never launches the EXE
+python .\scripts\inspect-package.py # Reads PE headers/imports/checksum; rejects GPU renderer imports
+.\scripts\inspect-icons.ps1 # Loads icon resources as data, never executes the EXE
 .\scripts\render-review.ps1 # After packaging; finite CPU-only rendering, no window/devices/network
+# Explicit opt-in: opens its own isolated CPU/GDI test window for about 25 seconds
+.\scripts\diagnose-render.ps1
 ```
 
 It creates an artificial project, two silent audio journals, edited MP4/AVI and a silent PCM WAV under `.test-output/synthetic-*`. The Python parsers independently check RIFF/ISO BMFF structure, codecs, sample counts and durations without playback. Tests also cover journal recovery, pause mapping, PCM conversion, cancellation, source/output preservation, settings and update verification. See [verification](docs/VERIFICATION.md) for results and deferred checks.
 
-`render-review.ps1` separately invokes the packaged EXE with a new absolute output directory, a 30-second internal deadline and a 45-second external timeout. Six UI scenes use three finite passes each. PNGs, a scene manifest and process measurements are written under `.test-output/render-review-*`; existing output is refused. The capture path skips normal startup/settings/update logic and asserts that no workers were started. Primary recording/export button bounds must fit each viewport. It is a static layout review, not an idle/hidden or normal-presenter test.
+`render-review.ps1` separately invokes the packaged EXE with a new absolute output directory, a 30-second internal deadline and a 45-second external timeout. Six UI scenes use three finite passes each. PNGs, a scene manifest and process measurements are written under `.test-output/render-review-*`; existing output is refused. The capture path skips normal startup/settings/update logic and asserts that no workers were started. Primary recording/export button bounds must fit each viewport. It is a static layout review, not an idle/hidden measurement. `diagnose-render.ps1` separately opts into a finite isolated native window: visible idle, explicit invalidation, minimized idle and restore. It disables capture/export/update dispatch, never reads screen pixels or opens audio endpoints, samples process CPU and actual CPU-raster/GDI-present timings, and closes automatically. Only its owned disposable PID can be terminated on timeout. See [native renderer evidence](docs/RENDER_PERFORMANCE.md).
 
 ## Data and updates
 
