@@ -1,6 +1,7 @@
 #![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
 
 mod app;
+mod chrome;
 mod dialogs;
 mod host;
 mod raster;
