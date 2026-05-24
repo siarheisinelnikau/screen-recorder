@@ -186,6 +186,7 @@ impl Host {
             event_loop.create_window(
                 Window::default_attributes()
                     .with_title(&self.title)
+                    .with_theme(Some(winit::window::Theme::Light))
                     .with_visible(false)
                     .with_active(self.active)
                     .with_window_icon(Some(icon))
@@ -193,6 +194,7 @@ impl Host {
                     .with_min_inner_size(winit::dpi::LogicalSize::new(880.0, 650.0)),
             )?,
         );
+        crate::chrome::apply(&window);
         let input = egui_winit::State::new(
             self.ctx.clone(),
             egui::ViewportId::ROOT,

@@ -221,6 +221,7 @@ fn isolate_input(owner: isize) -> Result<()> {
 }
 
 struct DiagnosticApp {
+    owner: isize,
     inner: RecorderApp,
     state: Arc<State>,
     worker: Option<JoinHandle<()>>,
@@ -237,7 +238,7 @@ impl DiagnosticApp {
             _ => 0,
         };
         ensure!(owner != 0, "Expected a Win32 diagnostic window");
-        let backend = json!({"path":"egui 0.37 -> egui_software_backend 0.0.2 CPU rasterizer -> softbuffer 0.4.8 Win32 CreateDIBSection / BitBlt", "renderer":"CPU / Windows GDI", "gpu_context":false,"diagnostic_input_disabled":true});
+        let backend = json!({"path":"egui 0.37 -> egui_software_backend 0.0.2 CPU rasterizer -> softbuffer 0.4.8 Win32 CreateDIBSection / BitBlt", "renderer":"CPU / Windows GDI", "gpu_context":false,"diagnostic_input_disabled":true,"window_theme_light":window.theme()==Some(winit::window::Theme::Light),"native_chrome":crate::chrome::inspect(owner)});
         let state = Arc::new(State {
             report: Mutex::new(
                 json!({"version":updater::VERSION,"backend":backend,"phases":[],"interrupted_intervals":[],"isolation":"synthetic fixtures; recording/export/update dispatch disabled; no normal settings or audio endpoints","complete":false}),
@@ -324,6 +325,7 @@ impl DiagnosticApp {
             ctx.request_repaint();
         });
         Ok(Self {
+            owner,
             inner,
             state,
             worker: Some(worker),
@@ -360,6 +362,7 @@ impl Application for DiagnosticApp {
         self.inner.on_exit();
         let metrics = host::snapshot();
         let mut report = self.state.report.lock().unwrap();
+        report["native_chrome_at_exit"] = crate::chrome::inspect(self.owner);
         report["totals"] = json!({"ui_calls":self.state.ui.load(Ordering::Relaxed),"logic_calls":self.state.logic.load(Ordering::Relaxed),"input_events":self.state.input.load(Ordering::Relaxed),"frame":timings(&metrics.frame),"layout":timings(&metrics.layout),"paint":timings(&metrics.paint),"present":timings(&metrics.present)});
         report["isolation_failed"] = json!(self.state.isolation_failed.load(Ordering::Relaxed));
         let _ = fs::write(
@@ -406,5 +409,20 @@ pub(crate) fn run(root: &Path) -> Result<()> {
         report["totals"]["present"]["errors"] == 0,
         "Native graphics errors were reported"
     );
+    ensure!(
+        report["backend"]["window_theme_light"] == true,
+        "Native window did not select the light theme"
+    );
+    for chrome in [
+        &report["backend"]["native_chrome"],
+        &report["native_chrome_at_exit"],
+    ] {
+        ensure!(
+            chrome["immersive_dark_mode"] != 1
+                && chrome["caption_matches_palette"] != false
+                && chrome["text_matches_palette"] != false,
+            "Native caption does not match the light palette"
+        );
+    }
     Ok(())
 }
