@@ -67,6 +67,10 @@ The diagnostic disables input only for its owned opaque test window; normal inpu
 
 The final six UI PNGs were inspected at 100%/150%. The EXE's native icon resources loaded/rendered at eight sizes without launching code; 16/32/256 images were visually inspected. The main window is configured with the same artwork. OS shell/cache identity, expanded UI states and native picker interaction remain separate checks.
 
+## Native caption consistency — rechecked
+
+The system caption now explicitly selects Light before show. In source `28a4ebe`, packaged SHA-256 `8bfd6086b22485bedf1b3f1005188ec4babd55c8c0396a65029f8ad87fe6ca8f`, DWM dark-caption mode read 0 before and after restore. Exact caption/text color queries were unavailable; no pixel-color match is claimed. The four clean five-second CPU/GDI phases again produced no UI/layout/raster/presents, and the test process exited normally. The current raw records are linked from [RENDER_PERFORMANCE.md](RENDER_PERFORMANCE.md). All 23 unit checks plus the synthetic Media Foundation test pass; no real recording or audio device was used.
+
 ## Deferred manual/device checks
 
 - Extend the measured CPU/GDI baseline to ordinary pointer, scroll, resize, focus/keyboard/accessibility and subjective desktop responsiveness on Windows 10/11. Recheck rendering/load after relevant executable or scheduling changes.
