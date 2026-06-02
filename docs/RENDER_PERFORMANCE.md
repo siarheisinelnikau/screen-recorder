@@ -2,6 +2,18 @@
 
 Measured on 2026-11-01 after applying `rust-performance` and inspecting the actual host, rasterizer and presenter. The **isolated visible/idle/minimized/restore checks passed**. This is a bounded native rendering result, not certification of all interactions or device paths.
 
+## Latest native caption check
+
+The user's crop exposed a dark native title bar over the fixed light client area. Source `28a4ebe` explicitly requests a light winit window theme before showing the window, then requests palette caption/text colors through DWM on this owned HWND. Unsupported color attributes fall back to the standard light native caption. There is no recurring style update or system-theme change.
+
+The new package SHA-256 is `8bfd6086b22485bedf1b3f1005188ec4babd55c8c0396a65029f8ad87fe6ca8f`. Native diagnostic PID **9868** exited normally after **31.347 seconds**. The native window reported **Light**, and DWM `USE_IMMERSIVE_DARK_MODE` read **0** both at creation and after restore. Caption/text color reads were unavailable (`null`); this verifies light mode, not an exact pixel-color match. No screen readback or computer use was performed.
+
+Four contiguous five-second clean phases again recorded zero UI/layout/raster/present work: visible idle **5.0011 s**, return to idle **5.0018 s**, minimized **5.0016 s**, restored idle **5.0020 s**. Each accounted zero CPU increments under Windows' coarse process-time accounting. Three input-contaminated intervals were retained separately and excluded from idle claims. Restore produced three fresh frames. Presentation errors were zero; the owned process module probe found no probed GPU DLLs. GPU counters remained unavailable. Full evidence: [caption result](performance/caption-result.json), [process identity](performance/caption-process.json).
+
+Formatting, Clippy, 23 synthetic unit tests and the synthetic native H.264/AAC round trip passed on this revision. PE inspection still rejects GPU renderer and dynamic CRT imports. Existing client-area PNGs below document the unchanged UI; they cannot show or verify a native title bar.
+
+The following detailed timings remain the original CPU/GDI baseline, retained with its original executable identity.
+
 ## Running path and isolation
 
 - Source `a6c1ec1`; optimized static-CRT x64 `dist/ScreenRecorder-v0.2.0.exe`.

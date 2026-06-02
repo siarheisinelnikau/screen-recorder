@@ -50,3 +50,5 @@ The runner has a 30-second internal / 45-second external deadline, refuses exist
 ```
 
 Native chrome, 200% OS DPI, mixed monitors, keyboard traversal beyond the synthetic switch check, expanded-state coverage, screen readers and native picker interaction remain separate manual checks. No computer use was performed.
+
+The later native-caption consistency fix (`28a4ebe`) leaves these client-area components unchanged. Its DWM light-mode and lifecycle checks are recorded separately in [RENDER_PERFORMANCE.md](RENDER_PERFORMANCE.md); these images are not evidence of the native title bar.
