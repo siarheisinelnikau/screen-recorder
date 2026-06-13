@@ -24,6 +24,7 @@ public static class ScreenRecorderIconResource {
 # Data/image resource mapping only: this never executes the target's entry point.
 $taskModule=[ScreenRecorderIconResource]::LoadLibraryExW([IO.Path]::GetFullPath($Executable),[IntPtr]::Zero,0x22)
 if ($taskModule -eq [IntPtr]::Zero) {throw 'Cannot map executable icon resources'}
+$taskResults = @()
 try {
     foreach ($taskSize in @(16,20,24,32,48,64,128,256)) {
         $taskHandle=[ScreenRecorderIconResource]::LoadImageW($taskModule,[IntPtr]1,1,$taskSize,$taskSize,0)
@@ -31,8 +32,24 @@ try {
         try {
             $taskIcon=[Drawing.Icon]::FromHandle($taskHandle)
             $taskBitmap=$taskIcon.ToBitmap()
-            try {$taskBitmap.Save((Join-Path $taskOutput "icon-$taskSize.png"),[Drawing.Imaging.ImageFormat]::Png)} finally {$taskBitmap.Dispose();$taskIcon.Dispose()}
+            try {
+                if ($taskBitmap.Width -ne $taskSize -or $taskBitmap.Height -ne $taskSize) { throw 'Wrong loaded icon dimensions' }
+                $taskLeft=$taskSize; $taskTop=$taskSize; $taskRight=-1; $taskBottom=-1; $taskVisible=0
+                for ($taskY=0; $taskY -lt $taskSize; $taskY++) {
+                    for ($taskX=0; $taskX -lt $taskSize; $taskX++) {
+                        if ($taskBitmap.GetPixel($taskX,$taskY).A -ge 32) {
+                            $taskLeft=[Math]::Min($taskLeft,$taskX); $taskTop=[Math]::Min($taskTop,$taskY)
+                            $taskRight=[Math]::Max($taskRight,$taskX); $taskBottom=[Math]::Max($taskBottom,$taskY)
+                            $taskVisible++
+                        }
+                    }
+                }
+                if ($taskVisible -eq 0 -or ($taskRight-$taskLeft) -lt ($taskSize/3)) { throw 'Blank or optically undersized icon' }
+                $taskResults += [ordered]@{size=$taskSize;visible_pixels=$taskVisible;alpha_bounds=@($taskLeft,$taskTop,$taskRight,$taskBottom)}
+                $taskBitmap.Save((Join-Path $taskOutput "icon-$taskSize.png"),[Drawing.Imaging.ImageFormat]::Png)
+            } finally {$taskBitmap.Dispose();$taskIcon.Dispose()}
         } finally {[void][ScreenRecorderIconResource]::DestroyIcon($taskHandle)}
     }
 } finally {[void][ScreenRecorderIconResource]::FreeLibrary($taskModule)}
 Write-Output "Loaded and rendered packaged Windows icon resources without launching: $taskOutput"
+$taskResults | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $taskOutput 'resources.json') -Encoding utf8
