@@ -34,6 +34,7 @@ struct Root {
     bitmap: Vec<u32>,
     bitmap_size: [u32; 2],
     dirty: bool,
+    cleanup_done: bool,
     occluded: bool,
 }
 impl Root {
@@ -146,6 +147,10 @@ impl Root {
         self.bitmap_size = [size.width, size.height];
         metrics::finish(metrics::Stage::Paint, paint, true);
         self.present()?;
+        if !self.cleanup_done {
+            screen_recorder::updater::cleanup_after_update();
+            self.cleanup_done = true;
+        }
         self.dirty = false;
         self.input.handle_platform_output_with_event_loop(
             &self.window,
@@ -189,12 +194,19 @@ impl Host {
                     .with_theme(Some(winit::window::Theme::Light))
                     .with_visible(false)
                     .with_active(self.active)
-                    .with_window_icon(Some(icon))
+                    .with_window_icon(Some(icon.clone()))
                     .with_inner_size(winit::dpi::LogicalSize::new(1120.0, 800.0))
                     .with_min_inner_size(winit::dpi::LogicalSize::new(880.0, 650.0)),
             )?,
         );
         crate::chrome::apply(&window);
+        // winit's generic icon config assigns ICON_SMALL only on Windows.
+        // Explicitly assign ICON_BIG for taskbar and Alt+Tab identity as well.
+        #[cfg(windows)]
+        {
+            use winit::platform::windows::WindowExtWindows;
+            window.set_taskbar_icon(Some(icon));
+        }
         let input = egui_winit::State::new(
             self.ctx.clone(),
             egui::ViewportId::ROOT,
@@ -225,6 +237,7 @@ impl Host {
             bitmap: Vec::new(),
             bitmap_size: [0, 0],
             dirty: true,
+            cleanup_done: false,
             occluded: false,
         });
         window.set_visible(true);

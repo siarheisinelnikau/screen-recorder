@@ -39,7 +39,7 @@ enum Event {
     Exported(JobResult<()>),
     Progress(String),
     Update(JobResult<Option<Update>>),
-    Downloaded(JobResult<PathBuf>),
+    Downloaded(JobResult<updater::Prepared>),
 }
 #[derive(Clone, Copy, PartialEq)]
 enum Tab {
@@ -559,7 +559,7 @@ impl RecorderApp {
                             self.status =
                                 "Update download cancelled; current installation preserved".into();
                         }
-                        Ok(staging) => match updater::launch_install(&staging) {
+                        Ok(mut prepared) => match updater::launch_install(&mut prepared) {
                             Ok(()) => {
                                 self.status = "Installing update and restarting…".into();
                                 self.closing = true;

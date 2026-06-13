@@ -12,7 +12,7 @@ try {
     [void]$taskText.AppendLine('ScreenRecorder third-party dependency and bundled font notices')
     [void]$taskText.AppendLine('Includes the locked Windows dependency graph, build tools and test dependencies.')
     foreach ($taskPackage in ($taskMetadata.packages | Sort-Object name,version)) {
-        if (-not $taskPackage.source) { continue }
+        if (-not $taskPackage.source -and $taskPackage.name -ne 'rust-auto-updator') { continue }
         $taskFolder = Split-Path -Parent $taskPackage.manifest_path
         [void]$taskText.AppendLine("`n===== $($taskPackage.name) $($taskPackage.version) =====")
         [void]$taskText.AppendLine("Declared license: $($taskPackage.license)")
@@ -21,6 +21,10 @@ try {
             $_.Name -match '^(LICENSE|LICENCE|COPYING|COPYRIGHT|NOTICE)' -or
             ($_.Directory.Name -eq 'fonts' -and $_.Extension -eq '.txt') -or
             ($taskPackage.license_file -and $_.FullName -eq (Join-Path $taskFolder $taskPackage.license_file))
+        }
+        if ($taskPackage.name -eq 'rust-auto-updator') {
+            [void]$taskText.AppendLine("`n--- Workspace LICENSE ---")
+            [void]$taskText.AppendLine([IO.File]::ReadAllText((Join-Path $taskFolder '../../LICENSE')))
         }
         foreach ($taskLicenseFile in $taskLicenseFiles) {
             [void]$taskText.AppendLine("`n--- $($taskLicenseFile.FullName.Substring($taskFolder.Length + 1)) ---")
