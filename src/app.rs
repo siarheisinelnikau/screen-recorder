@@ -744,7 +744,7 @@ impl RecorderApp {
                                 ui.selectable_value(
                                     &mut self.selected_source,
                                     index,
-                                    target_label(&t, l),
+                                    target_label(t, l),
                                 );
                             }
                         });
