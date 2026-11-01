@@ -167,18 +167,18 @@ fn frame(
         egui::WidgetInfo::selected(egui::Role::Button, ui.is_enabled(), selected, label)
     });
     let ink = if primary {
-        theme::ON_PRIMARY
+        theme::palette(ui).on_primary
     } else if selected {
-        theme::PRIMARY
+        theme::palette(ui).primary
     } else {
-        theme::TEXT
+        theme::palette(ui).text
     };
     let fill = if primary {
-        theme::PRIMARY
+        theme::palette(ui).primary
     } else if selected || response.hovered() {
-        theme::SELECTION
+        theme::palette(ui).selection
     } else {
-        theme::SURFACE
+        theme::palette(ui).surface
     };
     let opacity = if ui.is_enabled() { 1.0 } else { 0.5 };
     ui.painter().rect(
@@ -188,9 +188,9 @@ fn frame(
         Stroke::new(
             if response.has_focus() { 2. } else { 1. },
             if selected || response.has_focus() {
-                theme::PRIMARY
+                theme::palette(ui).primary
             } else {
-                theme::BORDER
+                theme::palette(ui).border
             },
         ),
         StrokeKind::Inside,
@@ -198,6 +198,7 @@ fn frame(
     (r, response, ink.gamma_multiply(opacity))
 }
 pub fn choice(ui: &mut Ui, kind: Icon, label: &str, selected: bool, width: f32) -> Response {
+    let width = fitted_width(ui, label, 14., width);
     let (r, response, ink) = frame(ui, vec2(width, 42.), label, selected, false);
     icon(
         ui.painter(),
@@ -215,6 +216,7 @@ pub fn choice(ui: &mut Ui, kind: Icon, label: &str, selected: bool, width: f32) 
     response
 }
 pub fn action(ui: &mut Ui, kind: Icon, label: &str, width: f32) -> Response {
+    let width = fitted_width(ui, label, 15., width);
     let (r, response, ink) = frame(ui, vec2(width, 44.), label, false, true);
     icon(
         ui.painter(),
@@ -232,7 +234,23 @@ pub fn action(ui: &mut Ui, kind: Icon, label: &str, width: f32) -> Response {
     response
 }
 pub fn toggle(ui: &mut Ui, value: &mut bool, kind: Icon, label: &str, detail: &str) -> Response {
-    let (r, mut response, ink) = frame(ui, vec2(ui.available_width(), 66.), label, false, false);
+    let width = ui.available_width();
+    let text_width = (width - 108.).max(80.);
+    let label_galley = ui.painter().layout(
+        label.into(),
+        egui::FontId::proportional(15.),
+        theme::palette(ui).text,
+        text_width,
+    );
+    let detail_galley = ui.painter().layout(
+        detail.into(),
+        egui::FontId::proportional(12.),
+        theme::palette(ui).secondary,
+        text_width,
+    );
+    let detail_top = 12. + label_galley.size().y + 5.;
+    let height = (detail_top + detail_galley.size().y + 12.).max(66.);
+    let (r, mut response, ink) = frame(ui, vec2(width, height), label, false, false);
     response.widget_info(|| {
         egui::WidgetInfo::selected(egui::Role::CheckBox, ui.is_enabled(), *value, label)
     });
@@ -242,32 +260,25 @@ pub fn toggle(ui: &mut Ui, value: &mut bool, kind: Icon, label: &str, detail: &s
     }
     icon(
         ui.painter(),
-        Rect::from_min_size(r.min + vec2(14., 22.), vec2(22., 22.)),
+        Rect::from_min_size(pos2(r.left() + 14., r.center().y - 11.), vec2(22., 22.)),
         kind,
         ink,
     );
-    ui.painter().text(
-        r.min + vec2(48., 14.),
-        egui::Align2::LEFT_TOP,
-        label,
-        egui::FontId::proportional(15.),
-        ink,
-    );
-    ui.painter().text(
-        r.min + vec2(48., 37.),
-        egui::Align2::LEFT_TOP,
-        detail,
-        egui::FontId::proportional(12.),
-        theme::SECONDARY,
+    ui.painter()
+        .galley(r.min + vec2(48., 12.), label_galley, ink);
+    ui.painter().galley(
+        r.min + vec2(48., detail_top),
+        detail_galley,
+        theme::palette(ui).secondary,
     );
     let track = Rect::from_center_size(pos2(r.right() - 34., r.center().y), vec2(36., 20.));
     ui.painter().rect_filled(
         track,
         10.,
         if *value {
-            theme::PRIMARY
+            theme::palette(ui).primary
         } else {
-            theme::CONTROL_TRACK
+            theme::palette(ui).control_track
         },
     );
     ui.painter().circle_filled(
@@ -280,43 +291,54 @@ pub fn toggle(ui: &mut Ui, value: &mut bool, kind: Icon, label: &str, detail: &s
             track.center().y,
         ),
         7.,
-        Color32::WHITE,
+        theme::palette(ui).on_primary,
     );
     response
 }
 pub fn brand(ui: &mut Ui) {
     let (r, _) = ui.allocate_exact_size(vec2(34., 34.), Sense::hover());
-    ui.painter().rect_filled(r, 9., theme::PRIMARY);
-    icon(ui.painter(), r.shrink(6.), Icon::Record, Color32::WHITE);
+    ui.painter().rect_filled(r, 9., theme::palette(ui).primary);
+    icon(
+        ui.painter(),
+        r.shrink(6.),
+        Icon::Record,
+        theme::palette(ui).on_primary,
+    );
     ui.label(
         egui::RichText::new("ScreenRecorder")
             .size(21.)
-            .color(theme::TEXT),
+            .color(theme::palette(ui).text),
     );
 }
 pub fn section(ui: &mut Ui, kind: Icon, label: &str) {
     ui.horizontal(|ui| {
         let (r, _) = ui.allocate_exact_size(vec2(20., 20.), Sense::hover());
-        icon(ui.painter(), r, kind, theme::SECONDARY);
+        icon(ui.painter(), r, kind, theme::palette(ui).secondary);
         ui.strong(label);
     });
 }
 pub fn nav(ui: &mut Ui, kind: Icon, label: &str, selected: bool, width: f32) -> Response {
+    let width = fitted_width(ui, label, 14., width);
     let (r, response) = ui.allocate_exact_size(vec2(width, 42.), Sense::click());
     response.widget_info(|| {
         egui::WidgetInfo::selected(egui::Role::Tab, ui.is_enabled(), selected, label)
     });
     let color = if selected {
-        theme::PRIMARY
+        theme::palette(ui).primary
     } else {
-        theme::SECONDARY
+        theme::palette(ui).secondary
     };
     if selected || response.hovered() {
-        ui.painter().rect_filled(r, 10., theme::SELECTION);
+        ui.painter()
+            .rect_filled(r, 10., theme::palette(ui).selection);
     }
     if response.has_focus() {
-        ui.painter()
-            .rect_stroke(r, 10., Stroke::new(2., theme::PRIMARY), StrokeKind::Inside);
+        ui.painter().rect_stroke(
+            r,
+            10.,
+            Stroke::new(2., theme::palette(ui).primary),
+            StrokeKind::Inside,
+        );
     }
     icon(
         ui.painter(),
@@ -332,6 +354,14 @@ pub fn nav(ui: &mut Ui, kind: Icon, label: &str, selected: bool, width: f32) -> 
         color,
     );
     response
+}
+fn fitted_width(ui: &Ui, label: &str, font_size: f32, minimum: f32) -> f32 {
+    let text = ui.painter().layout_no_wrap(
+        label.into(),
+        egui::FontId::proportional(font_size),
+        theme::palette(ui).text,
+    );
+    minimum.max(text.size().x + 58.)
 }
 #[cfg(test)]
 mod tests {

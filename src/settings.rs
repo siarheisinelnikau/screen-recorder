@@ -1,3 +1,4 @@
+use crate::localization::Language;
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -5,9 +6,20 @@ use std::{
     path::{Path, PathBuf},
 };
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Theme {
+    Dark,
+    #[default]
+    #[serde(other)]
+    Light,
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Settings {
+    pub language: Language,
+    pub theme: Theme,
     pub startup_updates: bool,
     pub output_folder: String,
     pub fps: u32,
@@ -17,6 +29,8 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         Self {
+            language: Language::English,
+            theme: Theme::Light,
             startup_updates: true,
             output_folder: String::new(),
             fps: 15,
@@ -75,6 +89,8 @@ mod tests {
             serde_json::from_str(r#"{"startup_updates":false,"output_folder":"","fps":15}"#)?;
         assert!(!settings.microphone && !settings.system_audio);
         assert!(!settings.startup_updates);
+        assert_eq!(settings.language, Language::English);
+        assert_eq!(settings.theme, Theme::Light);
         Ok(())
     }
     #[test]
@@ -90,6 +106,27 @@ mod tests {
         assert!(!Settings::load(&path)?.startup_updates);
         s.save(&path)?;
         assert!(!Settings::load(&path)?.startup_updates);
+        Ok(())
+    }
+    #[test]
+    fn appearance_preferences_round_trip_and_unknown_values_fall_back() -> Result<()> {
+        let dir = crate::test_directory()?;
+        let path = dir.path().join("appearance.json");
+        let settings = Settings {
+            language: Language::Italian,
+            theme: Theme::Dark,
+            startup_updates: false,
+            ..Default::default()
+        };
+        settings.save(&path)?;
+        let loaded = Settings::load(&path)?;
+        assert_eq!(loaded.language, Language::Italian);
+        assert_eq!(loaded.theme, Theme::Dark);
+        assert!(!loaded.startup_updates);
+        let unknown: Settings =
+            serde_json::from_str(r#"{"language":"future","theme":"future","fps":15}"#)?;
+        assert_eq!(unknown.language, Language::English);
+        assert_eq!(unknown.theme, Theme::Light);
         Ok(())
     }
 }

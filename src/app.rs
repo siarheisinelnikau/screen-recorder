@@ -1,5 +1,7 @@
 use crate::ui::Icon;
 use crate::{theme, ui as controls};
+use screen_recorder::localization::{Language, Message};
+use screen_recorder::settings::Theme;
 mod diagnostics;
 mod review;
 pub(crate) use diagnostics::run as diagnose_render;
@@ -37,7 +39,7 @@ enum Event {
     Preview(u64, JobResult<egui::ColorImage>),
     Recorded(PathBuf, JobResult<()>),
     Exported(JobResult<()>),
-    Progress(String),
+    Progress(Message),
     Update(JobResult<Option<Update>>),
     Downloaded(JobResult<updater::Prepared>),
 }
@@ -77,8 +79,8 @@ pub struct RecorderApp {
     preview: Option<egui::TextureHandle>,
     preview_dirty: bool,
     preview_generation: u64,
-    status: String,
-    error: Option<String>,
+    status: Message,
+    error: Option<Message>,
     busy: Busy,
     worker: Option<JoinHandle<()>>,
     control: Option<Arc<Control>>,
@@ -88,7 +90,7 @@ pub struct RecorderApp {
     update_worker: Option<JoinHandle<()>>,
     update_busy: bool,
     update: Option<Update>,
-    update_message: String,
+    update_message: Message,
     installing: bool,
     closing: bool,
 }
@@ -101,7 +103,7 @@ fn send(tx: &SyncSender<Event>, ctx: &egui::Context, event: Event) {
         ctx.request_repaint();
     }
 }
-fn progress(tx: &SyncSender<Event>, ctx: &egui::Context, text: String) {
+fn progress(tx: &SyncSender<Event>, ctx: &egui::Context, text: Message) {
     let _ = tx.try_send(Event::Progress(text));
     ctx.request_repaint();
 }
@@ -115,6 +117,51 @@ fn recording_name() -> String {
     )
 }
 
+fn target_label(target: &Target, language: Language) -> String {
+    match target {
+        Target::Display {
+            left,
+            top,
+            width,
+            height,
+            name,
+        } => {
+            // The number is generated metadata; do not translate an OS window title.
+            let number = name
+                .strip_prefix("Display ")
+                .and_then(|v| v.split_whitespace().next())
+                .unwrap_or("1");
+            Message::with(
+                "Display {number} · {width} × {height} at {left}, {top}",
+                [
+                    ("number", number.into()),
+                    ("width", width.to_string()),
+                    ("height", height.to_string()),
+                    ("left", left.to_string()),
+                    ("top", top.to_string()),
+                ],
+            )
+            .render(language)
+        }
+        Target::Window { name, .. } => name.clone(),
+        Target::Region {
+            left,
+            top,
+            width,
+            height,
+        } => Message::with(
+            "Region {left}, {top} · {width} × {height}",
+            [
+                ("left", left.to_string()),
+                ("top", top.to_string()),
+                ("width", width.to_string()),
+                ("height", height.to_string()),
+            ],
+        )
+        .render(language),
+    }
+}
+
 impl RecorderApp {
     pub fn new(ctx: &egui::Context, owner: isize) -> Self {
         theme::apply(ctx);
@@ -126,11 +173,13 @@ impl RecorderApp {
                     startup_updates: false,
                     ..Default::default()
                 },
-                Some(format!(
-                    "Settings could not be loaded; startup checks disabled for this session: {e:#}"
+                Some(Message::with(
+                    "Settings could not be loaded; startup checks disabled for this session: {detail}",
+                    [("detail", format!("{e:#}"))],
                 )),
             ),
         };
+        theme::choose(ctx, settings.theme);
         if settings.output_folder.is_empty() {
             settings.output_folder = std::env::var_os("USERPROFILE")
                 .map(PathBuf::from)
@@ -167,7 +216,8 @@ impl RecorderApp {
             preview_dirty: false,
             preview_generation: 0,
             status: "Ready to record".into(),
-            error: error.or(previous_update_error.map(|e| format!("Previous update failed: {e}"))),
+            error: error.or(previous_update_error
+                .map(|e| Message::with("Previous update failed: {detail}", [("detail", e)]))),
             busy: Busy::Idle,
             worker: None,
             control: None,
@@ -273,8 +323,12 @@ impl RecorderApp {
                             progress(
                                 &tx,
                                 &ctx,
-                                format!(
-                                    "Recorded {seconds:.1} s · {frames} frames · Ctrl+Shift+F10 stops"
+                                Message::with(
+                                    "Recorded {seconds} s · {frames} frames · Ctrl+Shift+F10 stops",
+                                    [
+                                        ("seconds", format!("{seconds:.1}")),
+                                        ("frames", frames.to_string()),
+                                    ],
                                 ),
                             );
                         },
@@ -355,8 +409,9 @@ impl RecorderApp {
         let path = PathBuf::from(self.export_path.trim());
         let extension = if self.export_mp4 { "mp4" } else { "avi" };
         if path.extension().is_none_or(|x| x != extension) || !path.is_absolute() {
-            self.error = Some(format!(
-                "Choose an absolute .{extension} path for the selected export format"
+            self.error = Some(Message::with(
+                "Choose an absolute .{extension} path for the selected export format",
+                [("extension", extension.into())],
             ));
             return;
         }
@@ -373,7 +428,10 @@ impl RecorderApp {
                     progress(
                         &tx,
                         &ctx,
-                        format!("Exporting video · {:.0}%", value * 100.0),
+                        Message::with(
+                            "Exporting video · {percent}%",
+                            [("percent", format!("{:.0}", value * 100.0))],
+                        ),
                     );
                     last.set(std::time::Instant::now());
                 }
@@ -432,7 +490,10 @@ impl RecorderApp {
                     progress(
                         &tx,
                         &ctx,
-                        format!("Downloading update · {:.0}%", value * 100.0),
+                        Message::with(
+                            "Downloading update · {percent}%",
+                            [("percent", format!("{:.0}", value * 100.0))],
+                        ),
                     );
                     last.set(std::time::Instant::now());
                 }
@@ -453,7 +514,7 @@ impl RecorderApp {
                             self.selected_source = 0;
                             self.status = "Sources refreshed · choose one before recording".into();
                         }
-                        Err(e) => self.error = Some(e),
+                        Err(e) => self.error = Some(e.into()),
                     }
                 }
                 Event::Loaded(value) => {
@@ -476,10 +537,12 @@ impl RecorderApp {
                                 "Recovered complete frames; incomplete trailing data was ignored"
                                     .into()
                             } else {
-                                format!(
-                                    "Loaded {} frames · {:.2} s",
-                                    project.frames.len(),
-                                    project.duration()
+                                Message::with(
+                                    "Loaded {frames} frames · {seconds} s",
+                                    [
+                                        ("frames", project.frames.len().to_string()),
+                                        ("seconds", format!("{:.2}", project.duration())),
+                                    ],
                                 )
                             };
                             self.project = Some(project);
@@ -490,7 +553,7 @@ impl RecorderApp {
                             self.tab = Tab::Edit;
                             self.mark_preview(ctx);
                         }
-                        Err(e) => self.error = Some(e),
+                        Err(e) => self.error = Some(e.into()),
                     }
                 }
                 Event::Preview(generation, value) => {
@@ -504,7 +567,7 @@ impl RecorderApp {
                             ))
                         }
                         Ok(_) => {}
-                        Err(e) => self.error = Some(e),
+                        Err(e) => self.error = Some(e.into()),
                     }
                 }
                 Event::Recorded(path, value) => {
@@ -514,15 +577,18 @@ impl RecorderApp {
                     self.open_path = path.to_string_lossy().into_owned();
                     match value {
                         Ok(()) => {
-                            self.status = format!("Recording saved: {}", path.display());
+                            self.status = Message::with(
+                                "Recording saved: {path}",
+                                [("path", path.display().to_string())],
+                            );
                             if !self.closing {
                                 self.load_project(ctx);
                             }
                         }
                         Err(e) => {
-                            self.error = Some(format!(
-                                "{e}\nAny complete frames can be opened from {}",
-                                path.display()
+                            self.error = Some(Message::with(
+                                "{detail}\nAny complete frames can be opened from {path}",
+                                [("detail", e), ("path", path.display().to_string())],
                             ));
                             self.status =
                                 "Recording stopped with an error; original project retained".into();
@@ -532,23 +598,33 @@ impl RecorderApp {
                 Event::Exported(value) => {
                     self.busy = Busy::Idle;
                     match value {
-                        Ok(()) => self.status = format!("Video exported: {}", self.export_path),
-                        Err(e) => self.error = Some(e),
+                        Ok(()) => {
+                            self.status = Message::with(
+                                "Video exported: {path}",
+                                [("path", self.export_path.clone())],
+                            )
+                        }
+                        Err(e) => self.error = Some(e.into()),
                     }
                 }
                 Event::Update(value) => {
                     self.update_busy = false;
                     match value {
                         Ok(Some(update)) => {
-                            self.update_message =
-                                format!("Version {} is available", update.version);
+                            self.update_message = Message::with(
+                                "Version {version} is available",
+                                [("version", update.version.to_string())],
+                            );
                             self.update = Some(update);
                         }
                         Ok(None) => {
                             self.update_message = "You have the latest stable version".into();
                             self.update = None;
                         }
-                        Err(e) => self.update_message = e,
+                        Err(e) => {
+                            self.update_message =
+                                Message::with("Update check failed: {detail}", [("detail", e)])
+                        }
                     }
                 }
                 Event::Downloaded(value) => {
@@ -564,10 +640,11 @@ impl RecorderApp {
                                 self.status = "Installing update and restarting…".into();
                                 self.closing = true;
                             }
-                            Err(e) => self.error = Some(format!("{e:#}")),
+                            Err(e) => self.error = Some(format!("{e:#}").into()),
                         },
                         Err(e) => {
-                            self.update_message = e;
+                            self.update_message =
+                                Message::with("Update failed: {detail}", [("detail", e)]);
                             self.status = "Update stopped; current installation preserved".into();
                         }
                     }
@@ -599,22 +676,23 @@ impl RecorderApp {
     }
 
     fn record_ui(&mut self, ui: &mut egui::Ui) {
-        ui.heading("New recording");
+        let l = self.settings.language;
+        ui.heading(l.text("New recording"));
         ui.label(
-            egui::RichText::new("Choose your canvas. Add sound if you need it.")
-                .color(theme::SECONDARY),
+            egui::RichText::new(l.text("Choose your canvas. Add sound if you need it."))
+                .color(theme::palette(ui).secondary),
         );
         ui.add_space(12.0);
         let editable = self.can_start();
         theme::panel(ui).show(ui, |ui| {
             ui.set_width(ui.available_width());
-            ui.strong("What would you like to record?");
+            ui.strong(l.text("What would you like to record?"));
             ui.add_enabled_ui(editable, |ui| {
                 ui.horizontal_wrapped(|ui| {
                     for (index, label, icon) in [
-                        (0, "Display", Icon::Display),
-                        (1, "Window", Icon::Window),
-                        (2, "Region", Icon::Region),
+                        (0, l.text("Display"), Icon::Display),
+                        (1, l.text("Window"), Icon::Window),
+                        (2, l.text("Region"), Icon::Region),
                     ] {
                         if controls::choice(ui, icon, label, self.source_mode == index, 124.)
                             .clicked()
@@ -623,32 +701,33 @@ impl RecorderApp {
                             self.selected_source = 0;
                         }
                     }
-                    if ui.button("Refresh sources").clicked() {
+                    if ui.button(l.text("Refresh sources")).clicked() {
                         self.refresh_sources(ui.ctx());
                     }
                 });
                 if self.source_mode == 2 {
                     ui.horizontal_wrapped(|ui| {
-                        for (label, n) in
-                            [("Left", &mut self.region.0), ("Top", &mut self.region.1)]
-                        {
+                        for (label, n) in [
+                            (l.text("Left"), &mut self.region.0),
+                            (l.text("Top"), &mut self.region.1),
+                        ] {
                             ui.label(label);
                             ui.add(egui::DragValue::new(n).range(-32768..=32768));
                         }
-                        ui.label("Width");
+                        ui.label(l.text("Width"));
                         ui.add(egui::DragValue::new(&mut self.region.2).range(64..=4096));
-                        ui.label("Height");
+                        ui.label(l.text("Height"));
                         ui.add(egui::DragValue::new(&mut self.region.3).range(64..=2160));
                     });
-                    ui.small("Physical pixels; negative positions are supported.");
+                    ui.small(l.text("Physical pixels; negative positions are supported."));
                 } else {
                     egui::ComboBox::from_id_salt("source")
                         .width(ui.available_width())
                         .selected_text(
-                            self.selected_target()
-                                .map_or("Refresh to find a display or window".into(), |t| {
-                                    t.label()
-                                }),
+                            self.selected_target().map_or(
+                                l.text("Refresh to find a display or window").into(),
+                                |t| target_label(&t, l),
+                            ),
                         )
                         .show_ui(ui, |ui| {
                             for (index, t) in self
@@ -662,52 +741,56 @@ impl RecorderApp {
                                 })
                                 .enumerate()
                             {
-                                ui.selectable_value(&mut self.selected_source, index, t.label());
+                                ui.selectable_value(
+                                    &mut self.selected_source,
+                                    index,
+                                    target_label(&t, l),
+                                );
                             }
                         });
                 }
                 if self.source_mode == 1 {
-                    ui.small(
+                    ui.small(l.text(
                         "Keep the selected window visible. Resizing or minimizing ends recording.",
-                    );
+                    ));
                 }
             });
         });
         ui.add_space(8.);
-        ui.strong("Sound");
+        ui.strong(l.text("Sound"));
         ui.add_enabled_ui(editable, |ui| {
             ui.columns(2, |columns| {
                 controls::toggle(
                     &mut columns[0],
                     &mut self.settings.microphone,
                     Icon::Mic,
-                    "Microphone",
-                    "Your default input",
+                    l.text("Microphone"),
+                    l.text("Your default input"),
                 );
                 controls::toggle(
                     &mut columns[1],
                     &mut self.settings.system_audio,
                     Icon::Sound,
-                    "System sound",
-                    "Audio playing on your PC",
+                    l.text("System sound"),
+                    l.text("Audio playing on your PC"),
                 );
             });
             ui.small(if self.settings.microphone || self.settings.system_audio {
-                "Sound starts only when you press Record."
+                l.text("Sound starts only when you press Record.")
             } else {
-                "Sound is off. Your recording will be silent."
+                l.text("Sound is off. Your recording will be silent.")
             });
         });
         ui.add_space(8.);
         theme::panel(ui).show(ui, |ui| {
             ui.set_width(ui.available_width());
             ui.horizontal(|ui| {
-                controls::section(ui, Icon::Folder, "Save to");
-                if ui.small_button("Choose folder…").clicked() && !self.isolated {
-                    match crate::dialogs::choose(self.owner, crate::dialogs::Kind::Folder) {
+                controls::section(ui, Icon::Folder, l.text("Save to"));
+                if ui.small_button(l.text("Choose folder…")).clicked() && !self.isolated {
+                    match crate::dialogs::choose(self.owner, crate::dialogs::Kind::Folder, l) {
                         Ok(Some(path)) => self.settings.output_folder = path,
                         Ok(None) => {}
-                        Err(e) => self.error = Some(format!("{e:#}")),
+                        Err(e) => self.error = Some(format!("{e:#}").into()),
                     }
                 }
             });
@@ -716,11 +799,11 @@ impl RecorderApp {
                     egui::TextEdit::singleline(&mut self.settings.output_folder)
                         .desired_width(f32::INFINITY),
                 );
-                ui.collapsing("Filename and quality", |ui| {
+                ui.collapsing(l.text("Filename and quality"), |ui| {
                     ui.horizontal_wrapped(|ui| {
-                        ui.label("Filename");
+                        ui.label(l.text("Filename"));
                         ui.text_edit_singleline(&mut self.recording_name);
-                        ui.label("Frames / sec");
+                        ui.label(l.text("Frames / sec"));
                         ui.add(egui::DragValue::new(&mut self.settings.fps).range(5..=30));
                     });
                 });
@@ -730,27 +813,28 @@ impl RecorderApp {
     }
 
     fn record_controls_ui(&mut self, ui: &mut egui::Ui) {
+        let l = self.settings.language;
         let editable = self.can_start();
         ui.add_space(6.0);
         ui.horizontal(|ui| {
             let start = ui
                 .add_enabled_ui(editable, |ui| {
-                    controls::action(ui, Icon::Record, "Start recording", 190.)
+                    controls::action(ui, Icon::Record, l.text("Start recording"), 190.)
                 })
                 .inner;
             remember_primary(&start);
             if ui
-                .add_enabled(editable, egui::Button::new("Open recording…"))
+                .add_enabled(editable, egui::Button::new(l.text("Open recording…")))
                 .clicked()
                 && !self.isolated
             {
-                match crate::dialogs::choose(self.owner, crate::dialogs::Kind::Project) {
+                match crate::dialogs::choose(self.owner, crate::dialogs::Kind::Project, l) {
                     Ok(Some(path)) => {
                         self.open_path = path;
                         self.load_project(ui.ctx());
                     }
                     Ok(None) => {}
-                    Err(e) => self.error = Some(format!("{e:#}")),
+                    Err(e) => self.error = Some(format!("{e:#}").into()),
                 }
             }
             if start.clicked() {
@@ -761,14 +845,21 @@ impl RecorderApp {
                 if ui
                     .add_enabled(
                         control.has_frames() && !control.is_stopped(),
-                        egui::Button::new(if paused { "Resume" } else { "Pause" }),
+                        egui::Button::new(if paused {
+                            l.text("Resume")
+                        } else {
+                            l.text("Pause")
+                        }),
                     )
                     .clicked()
                 {
                     control.pause(!paused);
                 }
                 if ui
-                    .add_enabled(!control.is_stopped(), egui::Button::new("Stop and save"))
+                    .add_enabled(
+                        !control.is_stopped(),
+                        egui::Button::new(l.text("Stop and save")),
+                    )
                     .clicked()
                 {
                     control.stop();
@@ -776,31 +867,39 @@ impl RecorderApp {
                 }
             }
         });
-        ui.small("Ctrl+Shift+F10 stops recording. Pause excludes time from video and sound.");
+        ui.small(
+            l.text("Ctrl+Shift+F10 stops recording. Pause excludes time from video and sound."),
+        );
     }
 
     fn edit_ui(&mut self, ui: &mut egui::Ui) {
+        let l = self.settings.language;
         let (Some(project), Some(mut edit)) = (self.project.clone(), self.edit.take()) else {
-            ui.heading("Your recording, with a clearer focus");
-            ui.label("Record a clip or open a .srec project from the Record tab.");
+            ui.heading(l.text("Your recording, with a clearer focus"));
+            ui.label(l.text("Record a clip or open a .srec project from the Record tab."));
             return;
         };
         let can_edit = matches!(self.busy, Busy::Idle | Busy::Preview) && !self.installing;
         let mut changed = false;
         ui.horizontal(|ui| {
-            ui.heading("Edit tutorial");
-            ui.label(format!(
-                "{} × {} · {} fps · {:.2} s",
-                project.width,
-                project.height,
-                project.fps,
-                project.duration()
-            ));
+            ui.heading(l.text("Edit tutorial"));
+            ui.label(
+                Message::with(
+                    "{width} × {height} · {fps} fps · {seconds} s",
+                    [
+                        ("width", project.width.to_string()),
+                        ("height", project.height.to_string()),
+                        ("fps", project.fps.to_string()),
+                        ("seconds", format!("{:.2}", project.duration())),
+                    ],
+                )
+                .render(l),
+            );
         });
         ui.columns(2, |columns| {
             let ui = &mut columns[0];
             theme::panel(ui).show(ui, |ui| {
-                ui.strong("Preview");
+                ui.strong(l.text("Preview"));
                 if let Some(texture) = &self.preview {
                     ui.add(
                         egui::Image::new(texture)
@@ -810,10 +909,10 @@ impl RecorderApp {
                             ))
                             .sense(egui::Sense::click()),
                     )
-                    .on_hover_text("Scrub the timeline to inspect the edited output");
+                    .on_hover_text(l.text("Scrub the timeline to inspect the edited output"));
                 } else {
                     ui.add_space(100.0);
-                    ui.label("Preparing preview…");
+                    ui.label(l.text("Preparing preview…"));
                     ui.add_space(100.0);
                 }
                 changed |= ui
@@ -821,19 +920,19 @@ impl RecorderApp {
                         theme::slider(
                             ui,
                             egui::Slider::new(&mut self.playhead, 0.0..=project.duration())
-                                .text("seconds")
+                                .text(l.text("seconds"))
                                 .fixed_decimals(2),
                         )
                     })
                     .inner
                     .changed();
-                ui.small("Drag the timeline to preview your edits.");
+                ui.small(l.text("Drag the timeline to preview your edits."));
             });
             let ui = &mut columns[1];
             ui.add_enabled_ui(can_edit, |ui| {
-                ui.strong("Trim range");
+                ui.strong(l.text("Trim range"));
                 ui.horizontal_wrapped(|ui| {
-                    ui.label("In");
+                    ui.label(l.text("In"));
                     changed |= ui
                         .add(
                             egui::DragValue::new(&mut edit.trim_start)
@@ -841,7 +940,7 @@ impl RecorderApp {
                                 .range(0.0..=project.duration()),
                         )
                         .changed();
-                    ui.label("Out");
+                    ui.label(l.text("Out"));
                     changed |= ui
                         .add(
                             egui::DragValue::new(&mut edit.trim_end)
@@ -851,17 +950,17 @@ impl RecorderApp {
                         .changed();
                 });
                 ui.horizontal_wrapped(|ui| {
-                    if ui.small_button("In at playhead").clicked() {
+                    if ui.small_button(l.text("In at playhead")).clicked() {
                         edit.trim_start = self.playhead;
                         changed = true;
                     }
-                    if ui.small_button("Out at playhead").clicked() {
+                    if ui.small_button(l.text("Out at playhead")).clicked() {
                         edit.trim_end = self.playhead;
                         changed = true;
                     }
                 });
                 ui.separator();
-                ui.strong("Choose a style");
+                ui.strong(l.text("Choose a style"));
                 let clean =
                     edit.show_cursor && !edit.highlight && !edit.clicks && !edit.automatic_zoom;
                 let guided =
@@ -871,9 +970,9 @@ impl RecorderApp {
                 let width = (ui.available_width() - 16.) / 3.;
                 ui.horizontal(|ui| {
                     for (label, icon, selected, highlight, zoom) in [
-                        ("Clean", Icon::Cursor, clean, false, false),
-                        ("Guided", Icon::Click, guided, true, false),
-                        ("Focus", Icon::Zoom, focus, true, true),
+                        (l.text("Clean"), Icon::Cursor, clean, false, false),
+                        (l.text("Guided"), Icon::Click, guided, true, false),
+                        (l.text("Focus"), Icon::Zoom, focus, true, true),
                     ] {
                         if controls::choice(ui, icon, label, selected, width).clicked() && !selected
                         {
@@ -886,90 +985,90 @@ impl RecorderApp {
                     }
                 });
                 ui.small(if focus {
-                    "Cursor emphasis with automatic zoom."
+                    l.text("Cursor emphasis with automatic zoom.")
                 } else if guided {
-                    "Highlight the cursor and emphasize each click."
+                    l.text("Highlight the cursor and emphasize each click.")
                 } else if clean {
-                    "Just your recording and a clean cursor."
+                    l.text("Just your recording and a clean cursor.")
                 } else {
-                    "Custom cursor and zoom settings."
+                    l.text("Custom cursor and zoom settings.")
                 });
-                ui.collapsing("Customize effects", |ui| {
+                ui.collapsing(l.text("Customize effects"), |ui| {
                     changed |= controls::toggle(
                         ui,
                         &mut edit.show_cursor,
                         Icon::Cursor,
-                        "Tutorial cursor",
-                        "A clear, consistent pointer",
+                        l.text("Tutorial cursor"),
+                        l.text("A clear, consistent pointer"),
                     )
                     .changed();
                     changed |= controls::toggle(
                         ui,
                         &mut edit.highlight,
                         Icon::Cursor,
-                        "Cursor highlight",
-                        "Keep the pointer easy to follow",
+                        l.text("Cursor highlight"),
+                        l.text("Keep the pointer easy to follow"),
                     )
                     .changed();
                     changed |= controls::toggle(
                         ui,
                         &mut edit.clicks,
                         Icon::Click,
-                        "Click emphasis",
-                        "Show where each click happens",
+                        l.text("Click emphasis"),
+                        l.text("Show where each click happens"),
                     )
                     .changed();
                     changed |= controls::toggle(
                         ui,
                         &mut edit.automatic_zoom,
                         Icon::Zoom,
-                        "Auto zoom",
-                        "Focus smoothly around clicks",
+                        l.text("Auto zoom"),
+                        l.text("Focus smoothly around clicks"),
                     )
                     .changed();
                 });
                 ui.separator();
-                ui.strong("Sound");
+                ui.strong(l.text("Sound"));
                 if !self.export_mp4 {
-                    ui.small("AVI exports are silent. Choose MP4 below to include sound.");
+                    ui.small(l.text("AVI exports are silent. Choose MP4 below to include sound."));
                 } else if project.audio_tracks.is_empty() {
-                    ui.small("This recording has no audio tracks.");
+                    ui.small(l.text("This recording has no audio tracks."));
                 } else {
                     controls::toggle(
                         ui,
                         &mut edit.include_audio,
                         Icon::Sound,
-                        "Recorded sound",
-                        "Include sound in your video",
+                        l.text("Recorded sound"),
+                        l.text("Include sound in your video"),
                     );
                     if edit.include_audio {
-                        ui.collapsing("Sound levels", |ui| {
+                        ui.collapsing(l.text("Sound levels"), |ui| {
                             for track in &project.audio_tracks {
                                 match track.kind {
                                     screen_recorder::audio::Kind::Microphone => {
                                         theme::slider(
                                             ui,
                                             egui::Slider::new(&mut edit.microphone_gain, 0.0..=2.0)
-                                                .text("Microphone"),
+                                                .text(l.text("Microphone")),
                                         );
                                     }
                                     screen_recorder::audio::Kind::System => {
                                         theme::slider(
                                             ui,
                                             egui::Slider::new(&mut edit.system_gain, 0.0..=2.0)
-                                                .text("System sound"),
+                                                .text(l.text("System sound")),
                                         );
                                     }
                                 }
                             }
-                            ui.small(
+                            ui.small(l.text(
                                 "Two tracks mix at half gain each. Preview does not play sound.",
-                            );
+                            ));
                         });
                     }
                 }
-                ui.collapsing("Edit zoom timing", |ui| {
-                    if ui.button("Add zoom at playhead").clicked()
+                ui.collapsing(l.text("Edit zoom timing"), |ui| {
+                    if ui.button(l.text("Add zoom at playhead")).clicked()
                         && self.playhead < project.duration()
                         && edit.zooms.len() < 2000
                     {
@@ -991,13 +1090,19 @@ impl RecorderApp {
                             for (i, zoom) in edit.zooms.iter_mut().enumerate() {
                                 ui.push_id(i, |ui| {
                                     ui.horizontal(|ui| {
-                                        ui.strong(format!("Zoom {}", i + 1));
-                                        if ui.small_button("Remove").clicked() {
+                                        ui.strong(
+                                            Message::with(
+                                                "Zoom {number}",
+                                                [("number", (i + 1).to_string())],
+                                            )
+                                            .render(l),
+                                        );
+                                        if ui.small_button(l.text("Remove")).clicked() {
                                             remove = Some(i);
                                         }
                                     });
                                     ui.horizontal(|ui| {
-                                        ui.label("In/out");
+                                        ui.label(l.text("In/out"));
                                         changed |= ui
                                             .add(
                                                 egui::DragValue::new(&mut zoom.start)
@@ -1022,7 +1127,7 @@ impl RecorderApp {
                                             .changed();
                                     });
                                     ui.horizontal(|ui| {
-                                        ui.label("Focus X/Y");
+                                        ui.label(l.text("Focus X/Y"));
                                         changed |= ui
                                             .add(
                                                 egui::DragValue::new(&mut zoom.x)
@@ -1055,19 +1160,22 @@ impl RecorderApp {
     }
 
     fn export_controls_ui(&mut self, ui: &mut egui::Ui) {
+        let l = self.settings.language;
         if self.project.is_none() {
             return;
         }
         let can_edit = matches!(self.busy, Busy::Idle | Busy::Preview) && !self.installing;
         ui.separator();
         ui.horizontal_wrapped(|ui| {
-            ui.strong("Export");
+            ui.strong(l.text("Export"));
             let old = self.export_mp4;
             ui.add_enabled_ui(can_edit, |ui| {
-                ui.selectable_value(&mut self.export_mp4, true, "MP4 video")
-                    .on_hover_text("Video with recorded sound; odd dimensions pad to even pixels");
-                ui.selectable_value(&mut self.export_mp4, false, "AVI · no sound")
-                    .on_hover_text("Silent video, limited to 2 GB per export");
+                ui.selectable_value(&mut self.export_mp4, true, l.text("MP4 video"))
+                    .on_hover_text(
+                        l.text("Video with recorded sound; odd dimensions pad to even pixels"),
+                    );
+                ui.selectable_value(&mut self.export_mp4, false, l.text("AVI · no sound"))
+                    .on_hover_text(l.text("Silent video, limited to 2 GB per export"));
             });
             if old != self.export_mp4 {
                 self.export_path = PathBuf::from(&self.export_path)
@@ -1083,7 +1191,7 @@ impl RecorderApp {
         ui.horizontal_wrapped(|ui| {
             let export = ui
                 .add_enabled_ui(self.can_start(), |ui| {
-                    controls::action(ui, Icon::Export, "Export video", 174.)
+                    controls::action(ui, Icon::Export, l.text("Export video"), 174.)
                 })
                 .inner;
             remember_primary(&export);
@@ -1091,41 +1199,78 @@ impl RecorderApp {
                 self.start_export(ui.ctx());
             }
             if ui
-                .add_enabled(can_edit, egui::Button::new("Save edit decisions"))
-                .on_hover_text(
+                .add_enabled(can_edit, egui::Button::new(l.text("Save edit decisions")))
+                .on_hover_text(l.text(
                     "Save trim, zoom and mix for the next session without changing source media",
-                )
+                ))
                 .clicked()
                 && let (Some(project), Some(edit)) = (&self.project, &self.edit)
             {
                 match edit.save(project) {
                     Ok(()) => self.status = "Edit decisions saved beside the project".into(),
-                    Err(e) => self.error = Some(format!("{e:#}")),
+                    Err(e) => self.error = Some(format!("{e:#}").into()),
                 }
             }
-            if self.busy == Busy::Export && ui.button("Cancel export").clicked() {
+            if self.busy == Busy::Export && ui.button(l.text("Cancel export")).clicked() {
                 self.cancel.store(true, Ordering::Relaxed);
             }
         });
     }
 
     fn settings_ui(&mut self, ui: &mut egui::Ui) {
-        ui.heading("Settings");
+        let l = self.settings.language;
+        ui.heading(l.text("Settings"));
         ui.label(
             egui::RichText::new(format!("ScreenRecorder {}", updater::VERSION))
-                .color(theme::SECONDARY),
+                .color(theme::palette(ui).secondary),
         );
         ui.add_space(12.);
+        let before = (self.settings.language, self.settings.theme);
         theme::panel(ui).show(ui, |ui| {
             ui.set_width(ui.available_width());
-            ui.strong("Recording defaults");
+            ui.strong(l.text("Appearance and language"));
+            ui.horizontal_wrapped(|ui| {
+                ui.label(l.text("Language"));
+                egui::ComboBox::from_id_salt("interface-language")
+                    .selected_text(self.settings.language.native_name())
+                    .show_ui(ui, |ui| {
+                        for language in Language::ALL {
+                            ui.selectable_value(
+                                &mut self.settings.language,
+                                language,
+                                language.native_name(),
+                            );
+                        }
+                    });
+                ui.label(l.text("Theme"));
+                ui.selectable_value(&mut self.settings.theme, Theme::Light, l.text("Light"));
+                ui.selectable_value(&mut self.settings.theme, Theme::Dark, l.text("Dark"));
+            });
+            ui.small(l.text("Changes apply immediately and are saved automatically."));
+        });
+        if before != (self.settings.language, self.settings.theme) {
+            theme::choose(ui.ctx(), self.settings.theme);
+            ui.ctx().request_repaint();
+            if !self.isolated
+                && let Err(error) = self.settings.save(&self.settings_path)
+            {
+                self.error = Some(Message::with(
+                    "Preference could not be saved: {detail}",
+                    [("detail", format!("{error:#}"))],
+                ));
+            }
+        }
+        ui.add_space(8.);
+        theme::panel(ui).show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            ui.strong(l.text("Recording defaults"));
             ui.horizontal(|ui| {
-                ui.label("Save recordings to");
-                if ui.small_button("Choose folder…").clicked() && !self.isolated {
-                    match crate::dialogs::choose(self.owner, crate::dialogs::Kind::Folder) {
+                ui.label(l.text("Save recordings to"));
+                if ui.small_button(l.text("Choose folder…")).clicked() && !self.isolated {
+                    match crate::dialogs::choose(self.owner, crate::dialogs::Kind::Folder, l) {
                         Ok(Some(path)) => self.settings.output_folder = path,
                         Ok(None) => {}
-                        Err(e) => self.error = Some(format!("{e:#}")),
+                        Err(e) => self.error = Some(format!("{e:#}").into()),
                     }
                 }
             });
@@ -1134,7 +1279,7 @@ impl RecorderApp {
                     .desired_width(f32::INFINITY),
             );
             ui.horizontal(|ui| {
-                ui.label("Frames per second");
+                ui.label(l.text("Frames per second"));
                 ui.add(egui::DragValue::new(&mut self.settings.fps).range(5..=30));
             });
             ui.columns(2, |columns| {
@@ -1142,74 +1287,84 @@ impl RecorderApp {
                     &mut columns[0],
                     &mut self.settings.microphone,
                     Icon::Mic,
-                    "Microphone",
-                    "For new recordings",
+                    l.text("Microphone"),
+                    l.text("For new recordings"),
                 );
                 controls::toggle(
                     &mut columns[1],
                     &mut self.settings.system_audio,
                     Icon::Sound,
-                    "System sound",
-                    "For new recordings",
+                    l.text("System sound"),
+                    l.text("For new recordings"),
                 );
             });
-            if ui.button("Save defaults").clicked() {
+            if ui.button(l.text("Save defaults")).clicked() {
                 match self.settings.save(&self.settings_path) {
                     Ok(()) => self.status = "Defaults saved".into(),
-                    Err(e) => self.error = Some(format!("{e:#}")),
+                    Err(e) => self.error = Some(format!("{e:#}").into()),
                 }
             }
         });
         ui.add_space(8.);
         theme::panel(ui).show(ui, |ui| {
             ui.set_width(ui.available_width());
-            ui.strong("Keep up to date");
+            ui.strong(l.text("Keep up to date"));
             if controls::toggle(
                 ui,
                 &mut self.settings.startup_updates,
                 Icon::Settings,
-                "Check on startup",
-                "Downloads always need your approval",
+                l.text("Check on startup"),
+                l.text("Downloads always need your approval"),
             )
             .changed()
                 && let Err(e) = self.settings.save(&self.settings_path)
             {
-                self.error = Some(format!("Preference could not be saved: {e:#}"));
+                self.error = Some(Message::with(
+                    "Preference could not be saved: {detail}",
+                    [("detail", format!("{e:#}"))],
+                ));
             }
             ui.horizontal_wrapped(|ui| {
                 if ui
-                    .add_enabled(!self.update_busy, egui::Button::new("Check for updates"))
+                    .add_enabled(
+                        !self.update_busy,
+                        egui::Button::new(l.text("Check for updates")),
+                    )
                     .clicked()
                 {
                     self.check_updates(ui.ctx());
                 }
-                ui.label(&self.update_message);
+                ui.label(self.update_message.render(l));
             });
             if let Some(update) = &self.update {
                 ui.colored_label(
-                    theme::SUCCESS,
-                    format!("Version {} is available", update.version),
+                    theme::palette(ui).success,
+                    Message::with(
+                        "Version {version} is available",
+                        [("version", update.version.to_string())],
+                    )
+                    .render(l),
                 );
                 if ui
                     .add_enabled(
                         self.can_start() && !self.update_busy,
-                        egui::Button::new("Download and install (restarts app)"),
+                        egui::Button::new(l.text("Download and install (restarts app)")),
                     )
                     .clicked()
                 {
                     self.install_update(ui.ctx());
                 }
             }
-            if self.installing && ui.button("Cancel download").clicked() {
+            if self.installing && ui.button(l.text("Cancel download")).clicked() {
                 self.cancel.store(true, Ordering::Relaxed);
             }
         });
         ui.add_space(8.);
-        ui.collapsing("About and recording support",|ui| {
-            ui.label("Records visible displays, windows or regions. Exports MP4 with sound or silent AVI.");
-            ui.small("No webcam or hidden-window capture. Keep the selected window visible.");
+        ui.collapsing(l.text("About and recording support"),|ui| {
+            ui.label(l.text("Records visible displays, windows or regions. Exports MP4 with sound or silent AVI."));
+            ui.small(l.text("No webcam or hidden-window capture. Keep the selected window visible."));
             ui.small(updater::REPOSITORY);
-            ui.small(format!("Settings: {}",self.settings_path.display()));
+            ui.small(Message::with("Settings: {path}", [("path", self.settings_path.display().to_string())]).render(l));
         });
     }
 }
@@ -1244,16 +1399,21 @@ impl crate::host::Application for RecorderApp {
 impl RecorderApp {
     /// Shared by the real window and the isolated offscreen review. No second UI is built.
     fn show(&mut self, ui: &mut egui::Ui) {
+        let l = self.settings.language;
         egui::CentralPanel::default()
-            .frame(egui::Frame::new().fill(theme::BACKGROUND).inner_margin(20))
+            .frame(
+                egui::Frame::new()
+                    .fill(theme::palette(ui).background)
+                    .inner_margin(20),
+            )
             .show(ui, |ui| {
                 ui.horizontal_wrapped(|ui| {
                     controls::brand(ui);
                     ui.add_space(20.);
                     for (tab, label, icon) in [
-                        (Tab::Record, "Record", Icon::Record),
-                        (Tab::Edit, "Edit", Icon::Edit),
-                        (Tab::Settings, "Settings", Icon::Settings),
+                        (Tab::Record, l.text("Record"), Icon::Record),
+                        (Tab::Edit, l.text("Edit"), Icon::Edit),
+                        (Tab::Settings, l.text("Settings"), Icon::Settings),
                     ] {
                         if controls::nav(ui, icon, label, self.tab == tab, 112.).clicked() {
                             self.tab = tab;
@@ -1261,25 +1421,28 @@ impl RecorderApp {
                     }
                     if let Some(control) = &self.control {
                         let (label, color) = if control.is_stopped() {
-                            ("FINALIZING", theme::WARNING)
+                            (l.text("FINALIZING"), theme::palette(ui).warning)
                         } else if !control.has_frames() {
-                            ("STARTING", theme::WARNING)
+                            (l.text("STARTING"), theme::palette(ui).warning)
                         } else if control.is_paused() {
-                            ("PAUSED", theme::WARNING)
+                            (l.text("PAUSED"), theme::palette(ui).warning)
                         } else {
-                            ("RECORDING", theme::ERROR)
+                            (l.text("RECORDING"), theme::palette(ui).error)
                         };
                         ui.colored_label(color, label);
                         if self.tab != Tab::Record
                             && ui
-                                .add_enabled(!control.is_stopped(), egui::Button::new("Stop"))
+                                .add_enabled(
+                                    !control.is_stopped(),
+                                    egui::Button::new(l.text("Stop")),
+                                )
                                 .clicked()
                         {
                             control.stop();
                         }
                     }
                     if self.update.is_some() {
-                        ui.colored_label(theme::SUCCESS, "Update available");
+                        ui.colored_label(theme::palette(ui).success, l.text("Update available"));
                     }
                 });
                 ui.separator();
@@ -1289,9 +1452,16 @@ impl RecorderApp {
                             .id_salt("error-message")
                             .max_height(88.0)
                             .show(ui, |ui| {
-                                ui.colored_label(theme::ERROR, error);
+                                ui.strong(l.text("Something went wrong"));
+                                if matches!(error, Message::Details(_)) {
+                                    ui.collapsing(l.text("Technical details"), |ui| {
+                                        ui.colored_label(theme::palette(ui).error, error.render(l));
+                                    });
+                                } else {
+                                    ui.colored_label(theme::palette(ui).error, error.render(l));
+                                }
                             });
-                        if ui.small_button("Dismiss").clicked() {
+                        if ui.small_button(l.text("Dismiss")).clicked() {
                             self.error = None;
                         }
                     });
@@ -1335,8 +1505,8 @@ impl RecorderApp {
                     Tab::Settings => {}
                 }
                 ui.separator();
-                ui.add(egui::Label::new(&self.status).truncate())
-                    .on_hover_text(&self.status);
+                ui.add(egui::Label::new(self.status.render(l)).truncate())
+                    .on_hover_text(self.status.render(l));
             });
     }
 }
