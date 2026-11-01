@@ -2,12 +2,13 @@
 
 A Windows-first recorder for readable tutorials: capture a display, visible window or a precise region, then trim the clip and add cursor emphasis and smooth zoom. Independent MIT-licensed implementation, with original UI and code. Inspired by the workflow of [Screen Studio](https://screen.studio/); no affiliation or shared assets.
 
-**Version 0.2.0 adds WASAPI audio capture, native MP4 export and a redesigned CPU/GDI interface.** Synthetic H.264/AAC encoding/decoding, six rendered UI views and a bounded native idle/minimized/restore check passed. Real desktop/audio capture, broad interactive compatibility and updater replacement remain unverified.
+**Version 0.3.0 adds six interface languages and a saved light/dark appearance setting.** Language and theme changes apply immediately in Settings. The existing WASAPI, MP4 and CPU/GDI recording workflow is preserved. This revision was verified without launching the GUI or accessing screen/audio devices; earlier visual/runtime evidence is identified by version below.
 
 ## Capabilities
 
-| Area | Implemented in 0.2.0 |
+| Area | Implemented in 0.3.0 |
 | --- | --- |
+| Interface | English, Russian, French, German, Spanish and Italian; immediate saved language and light/dark theme controls |
 | Sources | Explicit display, window or numeric region selection; physical virtual-desktop coordinates |
 | Recording | Windows GDI capture, 5–30 target fps, pause/resume, stop, visible state and Ctrl+Shift+F10 stop shortcut |
 | Storage | Append-only `.srec` video and separate timestamped audio journals; recovery of complete frames/packets after an incomplete write |
@@ -20,7 +21,7 @@ No webcam, timeline/audio playback, hidden-window recording, HDR color managemen
 
 ## Use on Windows
 
-The package is **`ScreenRecorder-v0.2.0.exe`**, Windows x64. Build it below; no repository or release has been published by this session. Intended requirements: Windows 10/11 with Media Foundation/H.264/AAC and Windows GDI desktop presentation. Windows N installations need Media Feature Pack; this is not installed by the app. Actual clean-machine and hardware compatibility remain to be verified.
+The package is **`ScreenRecorder-v0.3.0.exe`**, Windows x64. Build it using the commands below or obtain the versioned executable from the canonical repository releases. Intended requirements: Windows 10/11 with Media Foundation/H.264/AAC and Windows GDI desktop presentation. Windows N installations need Media Feature Pack; this is not installed by the app. Actual clean-machine and hardware compatibility remain to be verified.
 
 1. Launch the portable executable manually. In **Record**, select Display or Window and press **Refresh sources**, or enter a Region using physical pixels. Choose a source explicitly.
 2. Under **Sound**, opt into **Microphone**, **System sound**, both or neither. Both are off by default. Set an absolute output folder. Use **Choose folder…** or edit the path. The default filename is generated automatically; **Filename and quality** exposes those optional controls. The folder is created only after **Start recording**.
@@ -43,9 +44,15 @@ Keep `Recording.srec.mic.saudio` and `Recording.srec.system.saudio` beside `Reco
 
 MP4 uses the Windows software H.264 and AAC transforms with hardware transforms disabled. Odd dimensions are padded by replicating the last row/column to even dimensions. Encoding/finalization errors retain source media and do not publish an incomplete MP4. An adjacent `.partial.mp4` is created exclusively and removed on handled cancellation/failure; an existing partial is preserved. Finalization runs on the worker and may take time inside Windows APIs. AAC priming/padding can extend decoded audio slightly beyond the video; the 0.3-second fixture decoded to 0.32 seconds of silence. Long-session synchronization and actual devices still need manual checks.
 
-## Application-generated views
+## Language and appearance
 
-These are real Record/Edit/Settings components rendered by the packaged EXE's bounded `--render-review` mode. They use synthetic media and selected sound options as fixtures; no window, desktop capture, audio device, network or computer use is involved. The same CPU rasterizer as the normal window draws the actual egui 0.37 meshes/font textures. Native GDI presentation, window chrome and interactions require separate evidence. New installations still leave both sound options off.
+Open **Settings → Appearance and language**. Choose **English**, **Русский**, **Français**, **Deutsch**, **Español** or **Italiano**, and choose **Light** or **Dark**. Both choices apply immediately and save automatically to the existing settings file; no restart is needed. English and Light remain the defaults for existing settings that do not contain these preferences. Recording options and the startup-update opt-out are preserved. Unknown future language/theme values fall back safely.
+
+All application labels, help, recording/export status messages, update actions and native file-picker titles use the selected language. Window titles, filenames, paths and technical OS/codec/network details retain their original content. Named message parameters are inserted without translating or interpreting user values. Custom buttons grow for translated text and sound switches wrap their descriptions. Both palettes cover the custom controls, standard widgets and the native title bar where Windows supports those attributes.
+
+## Version 0.2.0 application-generated views (historical)
+
+**These screenshots predate the language/theme controls and show the previous light interface.** New v0.3.0 main/settings screenshots and runtime dark-mode review are pending because repository instructions prohibit application launch and screenshot capture in this session. These are real Record/Edit/Settings components rendered by the packaged EXE's bounded `--render-review` mode. They use synthetic media and selected sound options as fixtures; no window, desktop capture, audio device, network or computer use is involved. The same CPU rasterizer as the normal window draws the actual egui 0.37 meshes/font textures. Native GDI presentation, window chrome and interactions require separate evidence. New installations still leave both sound options off.
 
 ![Record view, actual application components with a synthetic source and both sound options selected](docs/screenshots/record.png)
 
@@ -53,7 +60,7 @@ These are real Record/Edit/Settings components rendered by the packaged EXE's bo
 
 ![Settings view, actual application components with isolated fixture preferences](docs/screenshots/settings.png)
 
-The interface uses neutral light surfaces, labeled vector icons and compact sound switches. The normal window now uses CPU rasterization and Windows GDI. The [isolated native check](docs/RENDER_PERFORMANCE.md) completed visible/idle/minimized/restore with no idle frame generation; broader input/device checks remain pending.
+The v0.2.0 views use neutral light surfaces, labeled vector icons and compact sound switches. The current interface also has a coordinated dark palette. The normal window now uses CPU rasterization and Windows GDI. The [isolated native check](docs/RENDER_PERFORMANCE.md) completed visible/idle/minimized/restore with no idle frame generation; broader input/device checks remain pending.
 
 See [render review evidence](docs/RENDER_REVIEW.md) for the narrower/high-DPI/error views, defects found and the separate native rendering measurements.
 
@@ -67,7 +74,7 @@ Use the installed Rust **1.96.1** MSVC toolchain (minimum 1.95) and Microsoft C+
 .\scripts\package.ps1 -Offline
 ```
 
-Omit `-Offline` on a machine that needs dependencies. `-NativeMedia` opts into the bounded synthetic Media Foundation encoder/decoder test; it never constructs a capture endpoint or plays media. Without that switch, unit tests and compilation still run. Packaging builds the static-CRT `x86_64-pc-windows-msvc` executable without starting it and creates `dist/ScreenRecorder-v0.2.0.exe`, `dist/SHA256SUMS.txt`, `dist/LICENSE.txt` and `dist/THIRD_PARTY_NOTICES.txt`. Keep the [license and notices](docs/THIRD_PARTY.md) with the unsigned executable. No step publishes anything.
+Omit `-Offline` on a machine that needs dependencies. `-NativeMedia` opts into the bounded synthetic Media Foundation encoder/decoder test; it never constructs a capture endpoint or plays media. Without that switch, unit tests and compilation still run. Packaging builds the static-CRT `x86_64-pc-windows-msvc` executable without starting it and creates `dist/ScreenRecorder-v0.3.0.exe`, `dist/SHA256SUMS.txt`, `dist/LICENSE.txt` and `dist/THIRD_PARTY_NOTICES.txt`. Keep the [license and notices](docs/THIRD_PARTY.md) with the unsigned executable. No step publishes anything.
 
 The optional fixture generator also never accesses a desktop or device:
 
@@ -90,11 +97,11 @@ It creates an artificial project, two silent audio journals, edited MP4/AVI and 
 
 Projects and edits are stored in the chosen folder. Settings are stored in `%LOCALAPPDATA%\ScreenRecorder\settings.json`. Recording and edit data are separate from the executable and are preserved during updates. Nothing uploads recorded media. A startup update check sends a normal public HTTPS request to GitHub only if **Check for updates on startup** is enabled; disabling it prevents that request on subsequent launches. Checks do not download application payloads.
 
-The planned canonical repository is [siarheisinelnikau/screen-recorder](https://github.com/siarheisinelnikau/screen-recorder). It has not been created or published in this run. A missing release, API rate limit or network error is reported as unavailable, not as an up-to-date installation. Manual checks remain available when startup checks are off.
+The canonical repository is [siarheisinelnikau/screen-recorder](https://github.com/siarheisinelnikau/screen-recorder). A missing release, API rate limit or network error is reported as unavailable, not as an up-to-date installation. Manual checks remain available when startup checks are off.
 
 **Download and install (restarts app)** downloads only the newer stable x64 portable asset and requires `SHA256SUMS.txt`. Downloads are size-bounded, verified against the digest and checked for an x64 PE header. A helper waits for the old process to exit, backs up the executable, replaces it and relaunches the same installed path. A failed replacement attempts to restore the original. The application folder must be writable. Update staging folders `.screenrecorder-update-*` retain the previous executable and any error log for manual recovery; they are not automatically deleted. Install failures are recorded in staging and `%LOCALAPPDATA%\ScreenRecorder\update-error.txt`, which is displayed on the next launch. Replacement/restart, interrupted downloads and real networking still require manual validation. Digests are fetched over HTTPS from the same official release; this is not an independent code-signing scheme.
 
-Read the [architecture](docs/ARCHITECTURE.md), [design decisions](docs/DESIGN.md), [manual validation checklist](docs/VERIFICATION.md) and [0.2 release draft](docs/RELEASE_NOTES_v0.2.0.md) before distribution.
+Read the [architecture](docs/ARCHITECTURE.md), [design decisions](docs/DESIGN.md), [manual validation checklist](docs/VERIFICATION.md) and [0.3 release notes](docs/RELEASE_NOTES_v0.3.0.md) before distribution.
 
 
 ## Shared updater and rendering audit
