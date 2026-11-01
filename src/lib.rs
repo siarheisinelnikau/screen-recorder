@@ -2,6 +2,7 @@ pub mod audio;
 pub mod avi;
 pub mod capture;
 pub mod editor;
+pub mod localization;
 pub mod mp4;
 pub mod project;
 pub mod recorder;

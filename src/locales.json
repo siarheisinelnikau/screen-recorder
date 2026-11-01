@@ -1,0 +1,1115 @@
+{
+  "Appearance and language": [
+    "Внешний вид и язык",
+    "Apparence et langue",
+    "Darstellung und Sprache",
+    "Apariencia e idioma",
+    "Aspetto e lingua"
+  ],
+  "Language": [
+    "Язык",
+    "Langue",
+    "Sprache",
+    "Idioma",
+    "Lingua"
+  ],
+  "Theme": [
+    "Тема",
+    "Thème",
+    "Design",
+    "Tema",
+    "Tema"
+  ],
+  "Light": [
+    "Светлая",
+    "Clair",
+    "Hell",
+    "Claro",
+    "Chiaro"
+  ],
+  "Dark": [
+    "Тёмная",
+    "Sombre",
+    "Dunkel",
+    "Oscuro",
+    "Scuro"
+  ],
+  "Changes apply immediately and are saved automatically.": [
+    "Изменения применяются сразу и сохраняются автоматически.",
+    "Les modifications sont immédiates et enregistrées automatiquement.",
+    "Änderungen werden sofort angewendet und automatisch gespeichert.",
+    "Los cambios se aplican de inmediato y se guardan automáticamente.",
+    "Le modifiche si applicano subito e si salvano automaticamente."
+  ],
+  "Ready to record": [
+    "Готово к записи",
+    "Prêt à enregistrer",
+    "Aufnahmebereit",
+    "Listo para grabar",
+    "Pronto per registrare"
+  ],
+  "No check performed": [
+    "Проверка ещё не выполнялась",
+    "Aucune vérification effectuée",
+    "Noch nicht geprüft",
+    "Sin comprobaciones",
+    "Nessun controllo eseguito"
+  ],
+  "Settings could not be loaded; startup checks disabled for this session: {detail}": [
+    "Не удалось загрузить настройки; проверка при запуске отключена на этот сеанс: {detail}",
+    "Impossible de charger les paramètres ; vérification au démarrage désactivée pour cette session : {detail}",
+    "Einstellungen konnten nicht geladen werden; Startprüfung für diese Sitzung deaktiviert: {detail}",
+    "No se pudieron cargar los ajustes; comprobación al inicio desactivada en esta sesión: {detail}",
+    "Impossibile caricare le impostazioni; controllo all'avvio disattivato per questa sessione: {detail}"
+  ],
+  "Previous update failed: {detail}": [
+    "Предыдущее обновление не удалось: {detail}",
+    "La mise à jour précédente a échoué : {detail}",
+    "Vorherige Aktualisierung fehlgeschlagen: {detail}",
+    "La actualización anterior falló: {detail}",
+    "Aggiornamento precedente non riuscito: {detail}"
+  ],
+  "Choose a source. Use Refresh sources to list displays and windows.": [
+    "Выберите источник. Нажмите «Обновить источники» для списка экранов и окон.",
+    "Choisissez une source. Actualisez les sources pour afficher les écrans et fenêtres.",
+    "Wählen Sie eine Quelle. Aktualisieren Sie die Quellen, um Bildschirme und Fenster aufzulisten.",
+    "Elija una fuente. Actualice las fuentes para ver pantallas y ventanas.",
+    "Scegli una sorgente. Aggiorna le sorgenti per elencare schermi e finestre."
+  ],
+  "Recording name must be a single filename ending in .srec": [
+    "Имя записи должно быть именем файла с расширением .srec",
+    "Le nom doit être un seul nom de fichier se terminant par .srec",
+    "Der Aufnahmename muss ein einzelner Dateiname mit der Endung .srec sein",
+    "El nombre de grabación debe ser un nombre de archivo terminado en .srec",
+    "Il nome della registrazione deve essere un nome di file con estensione .srec"
+  ],
+  "Choose an absolute output folder path": [
+    "Укажите абсолютный путь к папке сохранения",
+    "Choisissez un chemin absolu pour le dossier de sortie",
+    "Geben Sie einen absoluten Pfad zum Ausgabeordner an",
+    "Elija una ruta absoluta para la carpeta de salida",
+    "Scegli un percorso assoluto per la cartella di destinazione"
+  ],
+  "RECORDING · preparing capture · Ctrl+Shift+F10 stops while recording": [
+    "ЗАПИСЬ · подготовка захвата · Ctrl+Shift+F10 останавливает запись",
+    "ENREGISTREMENT · préparation · Ctrl+Maj+F10 pour arrêter",
+    "AUFNAHME · Vorbereitung · Strg+Umschalt+F10 zum Stoppen",
+    "GRABANDO · preparando captura · Ctrl+Mayús+F10 para detener",
+    "REGISTRAZIONE · preparazione · Ctrl+Maiusc+F10 per interrompere"
+  ],
+  "Recorded {seconds} s · {frames} frames · Ctrl+Shift+F10 stops": [
+    "Записано {seconds} с · {frames} кадров · Ctrl+Shift+F10 — стоп",
+    "Enregistré : {seconds} s · {frames} images · Ctrl+Maj+F10 pour arrêter",
+    "Aufgenommen: {seconds} s · {frames} Bilder · Strg+Umschalt+F10 stoppt",
+    "Grabado: {seconds} s · {frames} fotogramas · Ctrl+Mayús+F10 detiene",
+    "Registrati {seconds} s · {frames} fotogrammi · Ctrl+Maiusc+F10 interrompe"
+  ],
+  "Opening recording…": [
+    "Открытие записи…",
+    "Ouverture de l'enregistrement…",
+    "Aufnahme wird geöffnet…",
+    "Abriendo grabación…",
+    "Apertura della registrazione…"
+  ],
+  "Choose an absolute .{extension} path for the selected export format": [
+    "Укажите абсолютный путь с расширением .{extension} для выбранного формата",
+    "Choisissez un chemin absolu .{extension} pour le format sélectionné",
+    "Geben Sie einen absoluten .{extension}-Pfad für das gewählte Exportformat an",
+    "Elija una ruta absoluta .{extension} para el formato seleccionado",
+    "Scegli un percorso assoluto .{extension} per il formato selezionato"
+  ],
+  "Exporting video…": [
+    "Экспорт видео…",
+    "Exportation de la vidéo…",
+    "Video wird exportiert…",
+    "Exportando vídeo…",
+    "Esportazione video…"
+  ],
+  "Exporting video · {percent}%": [
+    "Экспорт видео · {percent}%",
+    "Exportation vidéo · {percent}%",
+    "Videoexport · {percent}%",
+    "Exportando vídeo · {percent}%",
+    "Esportazione video · {percent}%"
+  ],
+  "Checking for a stable release…": [
+    "Проверка стабильной версии…",
+    "Recherche d'une version stable…",
+    "Stabile Version wird gesucht…",
+    "Buscando una versión estable…",
+    "Ricerca di una versione stabile…"
+  ],
+  "Downloading update…": [
+    "Загрузка обновления…",
+    "Téléchargement de la mise à jour…",
+    "Aktualisierung wird heruntergeladen…",
+    "Descargando actualización…",
+    "Download dell'aggiornamento…"
+  ],
+  "Downloading update · {percent}%": [
+    "Загрузка обновления · {percent}%",
+    "Téléchargement · {percent}%",
+    "Aktualisierung herunterladen · {percent}%",
+    "Descargando actualización · {percent}%",
+    "Download aggiornamento · {percent}%"
+  ],
+  "Sources refreshed · choose one before recording": [
+    "Источники обновлены · выберите один перед записью",
+    "Sources actualisées · choisissez-en une avant d'enregistrer",
+    "Quellen aktualisiert · vor der Aufnahme eine auswählen",
+    "Fuentes actualizadas · elija una antes de grabar",
+    "Sorgenti aggiornate · scegline una prima di registrare"
+  ],
+  "Recovered complete frames; incomplete trailing data was ignored": [
+    "Полные кадры восстановлены; неполные данные в конце пропущены",
+    "Images complètes récupérées ; données finales incomplètes ignorées",
+    "Vollständige Bilder wiederhergestellt; unvollständiges Ende ignoriert",
+    "Fotogramas completos recuperados; se omitieron los datos finales incompletos",
+    "Fotogrammi completi recuperati; dati finali incompleti ignorati"
+  ],
+  "Loaded {frames} frames · {seconds} s": [
+    "Загружено {frames} кадров · {seconds} с",
+    "{frames} images chargées · {seconds} s",
+    "{frames} Bilder geladen · {seconds} s",
+    "{frames} fotogramas cargados · {seconds} s",
+    "Caricati {frames} fotogrammi · {seconds} s"
+  ],
+  "Recording saved: {path}": [
+    "Запись сохранена: {path}",
+    "Enregistrement sauvegardé : {path}",
+    "Aufnahme gespeichert: {path}",
+    "Grabación guardada: {path}",
+    "Registrazione salvata: {path}"
+  ],
+  "{detail}\nAny complete frames can be opened from {path}": [
+    "{detail}\nПолные кадры можно открыть из {path}",
+    "{detail}\nLes images complètes peuvent être ouvertes depuis {path}",
+    "{detail}\nVollständige Bilder können aus {path} geöffnet werden",
+    "{detail}\nLos fotogramas completos se pueden abrir desde {path}",
+    "{detail}\nI fotogrammi completi si possono aprire da {path}"
+  ],
+  "Recording stopped with an error; original project retained": [
+    "Запись остановлена из-за ошибки; исходный проект сохранён",
+    "Enregistrement arrêté sur erreur ; projet original conservé",
+    "Aufnahme mit Fehler gestoppt; Originalprojekt erhalten",
+    "Grabación detenida por un error; proyecto original conservado",
+    "Registrazione interrotta per errore; progetto originale conservato"
+  ],
+  "Video exported: {path}": [
+    "Видео экспортировано: {path}",
+    "Vidéo exportée : {path}",
+    "Video exportiert: {path}",
+    "Vídeo exportado: {path}",
+    "Video esportato: {path}"
+  ],
+  "Version {version} is available": [
+    "Доступна версия {version}",
+    "La version {version} est disponible",
+    "Version {version} ist verfügbar",
+    "La versión {version} está disponible",
+    "È disponibile la versione {version}"
+  ],
+  "You have the latest stable version": [
+    "Установлена последняя стабильная версия",
+    "Vous avez la dernière version stable",
+    "Sie verwenden die neueste stabile Version",
+    "Tiene la última versión estable",
+    "Hai l'ultima versione stabile"
+  ],
+  "Update download cancelled; current installation preserved": [
+    "Загрузка обновления отменена; текущая установка сохранена",
+    "Téléchargement annulé ; installation actuelle conservée",
+    "Download abgebrochen; aktuelle Installation erhalten",
+    "Descarga cancelada; instalación actual conservada",
+    "Download annullato; installazione attuale conservata"
+  ],
+  "Installing update and restarting…": [
+    "Установка обновления и перезапуск…",
+    "Installation et redémarrage…",
+    "Aktualisierung und Neustart…",
+    "Instalando actualización y reiniciando…",
+    "Installazione e riavvio…"
+  ],
+  "Update stopped; current installation preserved": [
+    "Обновление остановлено; текущая установка сохранена",
+    "Mise à jour arrêtée ; installation actuelle conservée",
+    "Aktualisierung gestoppt; aktuelle Installation erhalten",
+    "Actualización detenida; instalación actual conservada",
+    "Aggiornamento interrotto; installazione attuale conservata"
+  ],
+  "New recording": [
+    "Новая запись",
+    "Nouvel enregistrement",
+    "Neue Aufnahme",
+    "Nueva grabación",
+    "Nuova registrazione"
+  ],
+  "Choose your canvas. Add sound if you need it.": [
+    "Выберите область записи. При необходимости добавьте звук.",
+    "Choisissez votre cadre. Ajoutez du son si nécessaire.",
+    "Wählen Sie den Aufnahmebereich. Fügen Sie bei Bedarf Ton hinzu.",
+    "Elija el área de captura. Añada sonido si lo necesita.",
+    "Scegli l'area da registrare. Aggiungi l'audio se serve."
+  ],
+  "What would you like to record?": [
+    "Что вы хотите записать?",
+    "Que souhaitez-vous enregistrer ?",
+    "Was möchten Sie aufnehmen?",
+    "¿Qué desea grabar?",
+    "Che cosa vuoi registrare?"
+  ],
+  "Display": [
+    "Экран",
+    "Écran",
+    "Bildschirm",
+    "Pantalla",
+    "Schermo"
+  ],
+  "Window": [
+    "Окно",
+    "Fenêtre",
+    "Fenster",
+    "Ventana",
+    "Finestra"
+  ],
+  "Region": [
+    "Область",
+    "Zone",
+    "Bereich",
+    "Región",
+    "Area"
+  ],
+  "Refresh sources": [
+    "Обновить источники",
+    "Actualiser les sources",
+    "Quellen aktualisieren",
+    "Actualizar fuentes",
+    "Aggiorna sorgenti"
+  ],
+  "Left": [
+    "Слева",
+    "Gauche",
+    "Links",
+    "Izquierda",
+    "Sinistra"
+  ],
+  "Top": [
+    "Сверху",
+    "Haut",
+    "Oben",
+    "Arriba",
+    "Alto"
+  ],
+  "Width": [
+    "Ширина",
+    "Largeur",
+    "Breite",
+    "Ancho",
+    "Larghezza"
+  ],
+  "Height": [
+    "Высота",
+    "Hauteur",
+    "Höhe",
+    "Alto",
+    "Altezza"
+  ],
+  "Physical pixels; negative positions are supported.": [
+    "Физические пиксели; поддерживаются отрицательные координаты.",
+    "Pixels physiques ; les positions négatives sont acceptées.",
+    "Physische Pixel; negative Positionen werden unterstützt.",
+    "Píxeles físicos; se admiten posiciones negativas.",
+    "Pixel fisici; sono supportate coordinate negative."
+  ],
+  "Refresh to find a display or window": [
+    "Обновите список, чтобы найти экран или окно",
+    "Actualisez pour trouver un écran ou une fenêtre",
+    "Aktualisieren, um Bildschirm oder Fenster zu finden",
+    "Actualice para encontrar una pantalla o ventana",
+    "Aggiorna per trovare uno schermo o una finestra"
+  ],
+  "Display {number} · {width} × {height} at {left}, {top}": [
+    "Экран {number} · {width} × {height}, координаты {left}, {top}",
+    "Écran {number} · {width} × {height} à {left}, {top}",
+    "Bildschirm {number} · {width} × {height} bei {left}, {top}",
+    "Pantalla {number} · {width} × {height} en {left}, {top}",
+    "Schermo {number} · {width} × {height} a {left}, {top}"
+  ],
+  "Region {left}, {top} · {width} × {height}": [
+    "Область {left}, {top} · {width} × {height}",
+    "Zone {left}, {top} · {width} × {height}",
+    "Bereich {left}, {top} · {width} × {height}",
+    "Región {left}, {top} · {width} × {height}",
+    "Area {left}, {top} · {width} × {height}"
+  ],
+  "Keep the selected window visible. Resizing or minimizing ends recording.": [
+    "Держите выбранное окно видимым. Изменение размера или сворачивание завершает запись.",
+    "Gardez la fenêtre visible. La redimensionner ou la réduire arrête l'enregistrement.",
+    "Das gewählte Fenster muss sichtbar bleiben. Größenänderung oder Minimieren beendet die Aufnahme.",
+    "Mantenga visible la ventana. Cambiar su tamaño o minimizarla termina la grabación.",
+    "Mantieni visibile la finestra. Ridimensionarla o minimizzarla termina la registrazione."
+  ],
+  "Sound": [
+    "Звук",
+    "Son",
+    "Ton",
+    "Sonido",
+    "Audio"
+  ],
+  "Microphone": [
+    "Микрофон",
+    "Microphone",
+    "Mikrofon",
+    "Micrófono",
+    "Microfono"
+  ],
+  "Your default input": [
+    "Устройство ввода по умолчанию",
+    "Votre entrée par défaut",
+    "Standardeingabegerät",
+    "Entrada predeterminada",
+    "Ingresso predefinito"
+  ],
+  "System sound": [
+    "Системный звук",
+    "Son du système",
+    "Systemton",
+    "Sonido del sistema",
+    "Audio di sistema"
+  ],
+  "Audio playing on your PC": [
+    "Звук, воспроизводимый на ПК",
+    "Audio lu sur votre PC",
+    "Auf dem PC wiedergegebener Ton",
+    "Audio que se reproduce en su PC",
+    "Audio riprodotto dal PC"
+  ],
+  "Sound starts only when you press Record.": [
+    "Запись звука начинается только после нажатия кнопки записи.",
+    "Le son démarre uniquement lorsque vous lancez l'enregistrement.",
+    "Ton wird erst beim Start der Aufnahme erfasst.",
+    "El sonido comienza solo al iniciar la grabación.",
+    "L'audio inizia solo quando avvii la registrazione."
+  ],
+  "Sound is off. Your recording will be silent.": [
+    "Звук выключен. Запись будет без звука.",
+    "Le son est désactivé. L'enregistrement sera muet.",
+    "Ton ist deaktiviert. Die Aufnahme bleibt stumm.",
+    "El sonido está desactivado. La grabación será silenciosa.",
+    "L'audio è disattivato. La registrazione sarà muta."
+  ],
+  "Save to": [
+    "Сохранить в",
+    "Enregistrer dans",
+    "Speichern unter",
+    "Guardar en",
+    "Salva in"
+  ],
+  "Choose folder…": [
+    "Выбрать папку…",
+    "Choisir un dossier…",
+    "Ordner wählen…",
+    "Elegir carpeta…",
+    "Scegli cartella…"
+  ],
+  "Filename and quality": [
+    "Имя файла и качество",
+    "Nom du fichier et qualité",
+    "Dateiname und Qualität",
+    "Nombre de archivo y calidad",
+    "Nome file e qualità"
+  ],
+  "Filename": [
+    "Имя файла",
+    "Nom du fichier",
+    "Dateiname",
+    "Nombre de archivo",
+    "Nome file"
+  ],
+  "Frames / sec": [
+    "Кадров / с",
+    "Images / s",
+    "Bilder / Sek.",
+    "Fotogramas / s",
+    "Fotogrammi / s"
+  ],
+  "Start recording": [
+    "Начать запись",
+    "Démarrer l'enregistrement",
+    "Aufnahme starten",
+    "Iniciar grabación",
+    "Avvia registrazione"
+  ],
+  "Open recording…": [
+    "Открыть запись…",
+    "Ouvrir un enregistrement…",
+    "Aufnahme öffnen…",
+    "Abrir grabación…",
+    "Apri registrazione…"
+  ],
+  "Resume": [
+    "Продолжить",
+    "Reprendre",
+    "Fortsetzen",
+    "Reanudar",
+    "Riprendi"
+  ],
+  "Pause": [
+    "Пауза",
+    "Pause",
+    "Pause",
+    "Pausar",
+    "Pausa"
+  ],
+  "Stop and save": [
+    "Остановить и сохранить",
+    "Arrêter et enregistrer",
+    "Stoppen und speichern",
+    "Detener y guardar",
+    "Interrompi e salva"
+  ],
+  "Finalizing recording…": [
+    "Завершение записи…",
+    "Finalisation de l'enregistrement…",
+    "Aufnahme wird abgeschlossen…",
+    "Finalizando grabación…",
+    "Finalizzazione della registrazione…"
+  ],
+  "Ctrl+Shift+F10 stops recording. Pause excludes time from video and sound.": [
+    "Ctrl+Shift+F10 останавливает запись. Время паузы исключается из видео и звука.",
+    "Ctrl+Maj+F10 arrête l'enregistrement. Les pauses sont exclues de la vidéo et du son.",
+    "Strg+Umschalt+F10 stoppt. Pausen werden aus Video und Ton ausgeschlossen.",
+    "Ctrl+Mayús+F10 detiene la grabación. Las pausas se excluyen del vídeo y audio.",
+    "Ctrl+Maiusc+F10 interrompe. Il tempo in pausa è escluso da video e audio."
+  ],
+  "Your recording, with a clearer focus": [
+    "Ваша запись с ясными акцентами",
+    "Votre enregistrement, plus clair",
+    "Ihre Aufnahme, klarer im Fokus",
+    "Su grabación, con un enfoque más claro",
+    "La tua registrazione, più chiara"
+  ],
+  "Record a clip or open a .srec project from the Record tab.": [
+    "Запишите ролик или откройте проект .srec на вкладке «Запись».",
+    "Enregistrez une vidéo ou ouvrez un projet .srec depuis l'onglet Enregistrer.",
+    "Nehmen Sie einen Clip auf oder öffnen Sie ein .srec-Projekt im Tab Aufnahme.",
+    "Grabe un clip o abra un proyecto .srec desde la pestaña Grabar.",
+    "Registra un video o apri un progetto .srec dalla scheda Registra."
+  ],
+  "Edit tutorial": [
+    "Редактирование урока",
+    "Modifier le tutoriel",
+    "Tutorial bearbeiten",
+    "Editar tutorial",
+    "Modifica tutorial"
+  ],
+  "Preview": [
+    "Предпросмотр",
+    "Aperçu",
+    "Vorschau",
+    "Vista previa",
+    "Anteprima"
+  ],
+  "Scrub the timeline to inspect the edited output": [
+    "Перемещайтесь по шкале времени для просмотра результата",
+    "Parcourez la chronologie pour examiner le résultat",
+    "Zeitleiste verschieben, um die Bearbeitung zu prüfen",
+    "Recorra la línea de tiempo para inspeccionar el resultado",
+    "Scorri la sequenza temporale per verificare il risultato"
+  ],
+  "Preparing preview…": [
+    "Подготовка предпросмотра…",
+    "Préparation de l'aperçu…",
+    "Vorschau wird vorbereitet…",
+    "Preparando vista previa…",
+    "Preparazione dell'anteprima…"
+  ],
+  "seconds": [
+    "секунды",
+    "secondes",
+    "Sekunden",
+    "segundos",
+    "secondi"
+  ],
+  "Drag the timeline to preview your edits.": [
+    "Перетащите указатель времени, чтобы увидеть правки.",
+    "Faites glisser la chronologie pour voir vos modifications.",
+    "Ziehen Sie die Zeitleiste, um Änderungen anzusehen.",
+    "Arrastre la línea de tiempo para ver sus cambios.",
+    "Trascina la sequenza temporale per vedere le modifiche."
+  ],
+  "Trim range": [
+    "Диапазон обрезки",
+    "Plage de découpe",
+    "Schnittbereich",
+    "Intervalo de recorte",
+    "Intervallo di ritaglio"
+  ],
+  "In": [
+    "Начало",
+    "Début",
+    "Anfang",
+    "Entrada",
+    "Inizio"
+  ],
+  "Out": [
+    "Конец",
+    "Fin",
+    "Ende",
+    "Salida",
+    "Fine"
+  ],
+  "In at playhead": [
+    "Начало по указателю",
+    "Début au curseur",
+    "Anfang am Abspielkopf",
+    "Entrada en el cursor",
+    "Inizio al cursore"
+  ],
+  "Out at playhead": [
+    "Конец по указателю",
+    "Fin au curseur",
+    "Ende am Abspielkopf",
+    "Salida en el cursor",
+    "Fine al cursore"
+  ],
+  "Choose a style": [
+    "Выберите стиль",
+    "Choisir un style",
+    "Stil wählen",
+    "Elija un estilo",
+    "Scegli uno stile"
+  ],
+  "Clean": [
+    "Чистый",
+    "Épuré",
+    "Schlicht",
+    "Limpio",
+    "Essenziale"
+  ],
+  "Guided": [
+    "С акцентами",
+    "Guidé",
+    "Geführt",
+    "Guiado",
+    "Guidato"
+  ],
+  "Focus": [
+    "Фокус",
+    "Focus",
+    "Fokus",
+    "Enfoque",
+    "Focus"
+  ],
+  "Cursor emphasis with automatic zoom.": [
+    "Выделение курсора с автоматическим приближением.",
+    "Mise en évidence du curseur avec zoom automatique.",
+    "Cursorbetonung mit automatischem Zoom.",
+    "Énfasis del cursor con zoom automático.",
+    "Cursore in evidenza con zoom automatico."
+  ],
+  "Highlight the cursor and emphasize each click.": [
+    "Подсветка курсора и выделение каждого щелчка.",
+    "Surlignez le curseur et mettez chaque clic en évidence.",
+    "Cursor hervorheben und jeden Klick betonen.",
+    "Resalte el cursor y destaque cada clic.",
+    "Evidenzia il cursore e ogni clic."
+  ],
+  "Just your recording and a clean cursor.": [
+    "Только запись и аккуратный курсор.",
+    "Votre enregistrement et un curseur épuré.",
+    "Nur Ihre Aufnahme und ein klarer Cursor.",
+    "Solo su grabación y un cursor limpio.",
+    "Solo la registrazione e un cursore essenziale."
+  ],
+  "Custom cursor and zoom settings.": [
+    "Свои настройки курсора и приближения.",
+    "Paramètres personnalisés du curseur et du zoom.",
+    "Eigene Cursor- und Zoomeinstellungen.",
+    "Ajustes personalizados de cursor y zoom.",
+    "Impostazioni personalizzate di cursore e zoom."
+  ],
+  "Customize effects": [
+    "Настроить эффекты",
+    "Personnaliser les effets",
+    "Effekte anpassen",
+    "Personalizar efectos",
+    "Personalizza effetti"
+  ],
+  "Tutorial cursor": [
+    "Курсор для урока",
+    "Curseur de tutoriel",
+    "Tutorial-Cursor",
+    "Cursor de tutorial",
+    "Cursore del tutorial"
+  ],
+  "A clear, consistent pointer": [
+    "Чёткий единообразный указатель",
+    "Un pointeur clair et cohérent",
+    "Ein klarer, einheitlicher Zeiger",
+    "Un puntero claro y coherente",
+    "Un puntatore chiaro e uniforme"
+  ],
+  "Cursor highlight": [
+    "Подсветка курсора",
+    "Surlignage du curseur",
+    "Cursorhervorhebung",
+    "Resaltado del cursor",
+    "Evidenziazione cursore"
+  ],
+  "Keep the pointer easy to follow": [
+    "Помогает следить за указателем",
+    "Rend le pointeur facile à suivre",
+    "Den Zeiger leicht verfolgbar machen",
+    "Facilita seguir el puntero",
+    "Rende facile seguire il puntatore"
+  ],
+  "Click emphasis": [
+    "Выделение щелчков",
+    "Mise en évidence des clics",
+    "Klickbetonung",
+    "Énfasis de clics",
+    "Evidenziazione clic"
+  ],
+  "Show where each click happens": [
+    "Показывает место каждого щелчка",
+    "Indique l'emplacement de chaque clic",
+    "Zeigt die Position jedes Klicks",
+    "Muestra dónde ocurre cada clic",
+    "Mostra dove avviene ogni clic"
+  ],
+  "Auto zoom": [
+    "Автоприближение",
+    "Zoom automatique",
+    "Automatischer Zoom",
+    "Zoom automático",
+    "Zoom automatico"
+  ],
+  "Focus smoothly around clicks": [
+    "Плавно приближает область щелчка",
+    "Zoome en douceur autour des clics",
+    "Sanfter Fokus auf Klickpositionen",
+    "Enfoca suavemente alrededor de los clics",
+    "Ingrandisce dolcemente l'area dei clic"
+  ],
+  "AVI exports are silent. Choose MP4 below to include sound.": [
+    "AVI экспортируется без звука. Выберите MP4 ниже для сохранения звука.",
+    "Les exports AVI sont muets. Choisissez MP4 ci-dessous pour inclure le son.",
+    "AVI-Exporte sind stumm. Wählen Sie unten MP4 für Ton.",
+    "Las exportaciones AVI son silenciosas. Elija MP4 para incluir sonido.",
+    "Le esportazioni AVI sono mute. Scegli MP4 per includere l'audio."
+  ],
+  "This recording has no audio tracks.": [
+    "В этой записи нет звуковых дорожек.",
+    "Cet enregistrement n'a aucune piste audio.",
+    "Diese Aufnahme enthält keine Audiospuren.",
+    "Esta grabación no tiene pistas de audio.",
+    "Questa registrazione non contiene tracce audio."
+  ],
+  "Recorded sound": [
+    "Записанный звук",
+    "Son enregistré",
+    "Aufgenommener Ton",
+    "Sonido grabado",
+    "Audio registrato"
+  ],
+  "Include sound in your video": [
+    "Добавить звук в видео",
+    "Inclure le son dans la vidéo",
+    "Ton im Video einschließen",
+    "Incluir sonido en el vídeo",
+    "Includi l'audio nel video"
+  ],
+  "Sound levels": [
+    "Уровни звука",
+    "Niveaux sonores",
+    "Tonpegel",
+    "Niveles de sonido",
+    "Livelli audio"
+  ],
+  "Two tracks mix at half gain each. Preview does not play sound.": [
+    "Две дорожки смешиваются на половинной громкости. Предпросмотр без звука.",
+    "Les deux pistes sont mixées à demi-gain. L'aperçu ne lit pas le son.",
+    "Zwei Spuren werden mit halbem Pegel gemischt. Die Vorschau ist stumm.",
+    "Las dos pistas se mezclan a media ganancia. La vista previa no reproduce sonido.",
+    "Le due tracce si mixano a metà guadagno. L'anteprima non riproduce audio."
+  ],
+  "Edit zoom timing": [
+    "Изменить интервалы приближения",
+    "Modifier le timing du zoom",
+    "Zoomzeiten bearbeiten",
+    "Editar tiempos del zoom",
+    "Modifica tempi dello zoom"
+  ],
+  "Add zoom at playhead": [
+    "Добавить приближение по указателю",
+    "Ajouter un zoom au curseur",
+    "Zoom am Abspielkopf hinzufügen",
+    "Añadir zoom en el cursor",
+    "Aggiungi zoom al cursore"
+  ],
+  "Zoom {number}": [
+    "Приближение {number}",
+    "Zoom {number}",
+    "Zoom {number}",
+    "Zoom {number}",
+    "Zoom {number}"
+  ],
+  "Remove": [
+    "Удалить",
+    "Supprimer",
+    "Entfernen",
+    "Eliminar",
+    "Rimuovi"
+  ],
+  "In/out": [
+    "Начало/конец",
+    "Début/fin",
+    "Anfang/Ende",
+    "Entrada/salida",
+    "Inizio/fine"
+  ],
+  "Focus X/Y": [
+    "Фокус X/Y",
+    "Foyer X/Y",
+    "Fokus X/Y",
+    "Enfoque X/Y",
+    "Fuoco X/Y"
+  ],
+  "Export": [
+    "Экспорт",
+    "Exporter",
+    "Exportieren",
+    "Exportar",
+    "Esporta"
+  ],
+  "MP4 video": [
+    "Видео MP4",
+    "Vidéo MP4",
+    "MP4-Video",
+    "Vídeo MP4",
+    "Video MP4"
+  ],
+  "Video with recorded sound; odd dimensions pad to even pixels": [
+    "Видео с записанным звуком; нечётные размеры дополняются до чётных",
+    "Vidéo avec son ; dimensions impaires complétées en pixels pairs",
+    "Video mit Ton; ungerade Abmessungen werden auf gerade Pixel ergänzt",
+    "Vídeo con sonido; las dimensiones impares se amplían a pares",
+    "Video con audio; le dimensioni dispari si estendono a pixel pari"
+  ],
+  "AVI · no sound": [
+    "AVI · без звука",
+    "AVI · sans son",
+    "AVI · ohne Ton",
+    "AVI · sin sonido",
+    "AVI · senza audio"
+  ],
+  "Silent video, limited to 2 GB per export": [
+    "Видео без звука, не более 2 ГБ на экспорт",
+    "Vidéo muette, limitée à 2 Go par export",
+    "Stummes Video, maximal 2 GB pro Export",
+    "Vídeo sin sonido, máximo 2 GB por exportación",
+    "Video muto, massimo 2 GB per esportazione"
+  ],
+  "Export video": [
+    "Экспорт видео",
+    "Exporter la vidéo",
+    "Video exportieren",
+    "Exportar vídeo",
+    "Esporta video"
+  ],
+  "Save edit decisions": [
+    "Сохранить правки",
+    "Enregistrer les modifications",
+    "Bearbeitung speichern",
+    "Guardar edición",
+    "Salva modifiche"
+  ],
+  "Save trim, zoom and mix for the next session without changing source media": [
+    "Сохранить обрезку, приближение и микс для следующего сеанса без изменения исходника",
+    "Enregistrer découpe, zoom et mixage sans modifier le média source",
+    "Schnitt, Zoom und Mischung speichern, ohne die Quelldatei zu ändern",
+    "Guarde recorte, zoom y mezcla sin cambiar el archivo original",
+    "Salva ritaglio, zoom e mix senza modificare il file originale"
+  ],
+  "Edit decisions saved beside the project": [
+    "Правки сохранены рядом с проектом",
+    "Modifications enregistrées à côté du projet",
+    "Bearbeitung neben dem Projekt gespeichert",
+    "Edición guardada junto al proyecto",
+    "Modifiche salvate accanto al progetto"
+  ],
+  "Cancel export": [
+    "Отменить экспорт",
+    "Annuler l'export",
+    "Export abbrechen",
+    "Cancelar exportación",
+    "Annulla esportazione"
+  ],
+  "Settings": [
+    "Настройки",
+    "Paramètres",
+    "Einstellungen",
+    "Ajustes",
+    "Impostazioni"
+  ],
+  "Recording defaults": [
+    "Настройки записи",
+    "Réglages d'enregistrement",
+    "Aufnahmestandards",
+    "Valores de grabación",
+    "Impostazioni di registrazione"
+  ],
+  "Save recordings to": [
+    "Сохранять записи в",
+    "Enregistrer les vidéos dans",
+    "Aufnahmen speichern unter",
+    "Guardar grabaciones en",
+    "Salva registrazioni in"
+  ],
+  "Frames per second": [
+    "Кадров в секунду",
+    "Images par seconde",
+    "Bilder pro Sekunde",
+    "Fotogramas por segundo",
+    "Fotogrammi al secondo"
+  ],
+  "For new recordings": [
+    "Для новых записей",
+    "Pour les nouveaux enregistrements",
+    "Für neue Aufnahmen",
+    "Para nuevas grabaciones",
+    "Per nuove registrazioni"
+  ],
+  "Save defaults": [
+    "Сохранить настройки",
+    "Enregistrer les réglages",
+    "Standards speichern",
+    "Guardar valores",
+    "Salva impostazioni"
+  ],
+  "Defaults saved": [
+    "Настройки сохранены",
+    "Réglages enregistrés",
+    "Standards gespeichert",
+    "Valores guardados",
+    "Impostazioni salvate"
+  ],
+  "Keep up to date": [
+    "Обновления",
+    "Rester à jour",
+    "Aktuell bleiben",
+    "Mantener actualizado",
+    "Aggiornamenti"
+  ],
+  "Check on startup": [
+    "Проверять при запуске",
+    "Vérifier au démarrage",
+    "Beim Start prüfen",
+    "Comprobar al inicio",
+    "Controlla all'avvio"
+  ],
+  "Downloads always need your approval": [
+    "Загрузка начинается только по вашему действию",
+    "Les téléchargements nécessitent votre accord",
+    "Downloads erfordern immer Ihre Zustimmung",
+    "Las descargas siempre requieren su aprobación",
+    "I download richiedono sempre la tua approvazione"
+  ],
+  "Preference could not be saved: {detail}": [
+    "Не удалось сохранить настройку: {detail}",
+    "Impossible d'enregistrer la préférence : {detail}",
+    "Einstellung konnte nicht gespeichert werden: {detail}",
+    "No se pudo guardar la preferencia: {detail}",
+    "Impossibile salvare la preferenza: {detail}"
+  ],
+  "Check for updates": [
+    "Проверить обновления",
+    "Rechercher des mises à jour",
+    "Nach Updates suchen",
+    "Buscar actualizaciones",
+    "Controlla aggiornamenti"
+  ],
+  "Download and install (restarts app)": [
+    "Загрузить и установить (с перезапуском)",
+    "Télécharger et installer (redémarre l'application)",
+    "Herunterladen und installieren (Neustart)",
+    "Descargar e instalar (reinicia la aplicación)",
+    "Scarica e installa (riavvia l'app)"
+  ],
+  "Cancel download": [
+    "Отменить загрузку",
+    "Annuler le téléchargement",
+    "Download abbrechen",
+    "Cancelar descarga",
+    "Annulla download"
+  ],
+  "About and recording support": [
+    "О программе и поддержке записи",
+    "À propos et aide à l'enregistrement",
+    "Info und Aufnahmeunterstützung",
+    "Acerca de y ayuda de grabación",
+    "Informazioni e supporto registrazione"
+  ],
+  "Records visible displays, windows or regions. Exports MP4 with sound or silent AVI.": [
+    "Записывает видимые экраны, окна и области. Экспортирует MP4 со звуком или AVI без звука.",
+    "Enregistre les écrans, fenêtres et zones visibles. Exporte en MP4 avec son ou AVI muet.",
+    "Nimmt sichtbare Bildschirme, Fenster oder Bereiche auf. Exportiert MP4 mit Ton oder stummes AVI.",
+    "Graba pantallas, ventanas o regiones visibles. Exporta MP4 con sonido o AVI silencioso.",
+    "Registra schermi, finestre o aree visibili. Esporta MP4 con audio o AVI muto."
+  ],
+  "No webcam or hidden-window capture. Keep the selected window visible.": [
+    "Запись веб-камеры и скрытых окон не поддерживается. Держите выбранное окно видимым.",
+    "Pas de capture de webcam ni de fenêtre masquée. Gardez la fenêtre sélectionnée visible.",
+    "Keine Webcam- oder Aufnahme versteckter Fenster. Das gewählte Fenster muss sichtbar bleiben.",
+    "Sin cámara web ni captura de ventanas ocultas. Mantenga visible la ventana elegida.",
+    "Nessuna webcam o cattura di finestre nascoste. Mantieni visibile la finestra scelta."
+  ],
+  "Settings: {path}": [
+    "Настройки: {path}",
+    "Paramètres : {path}",
+    "Einstellungen: {path}",
+    "Ajustes: {path}",
+    "Impostazioni: {path}"
+  ],
+  "Finishing active work before closing…": [
+    "Завершение текущей работы перед закрытием…",
+    "Finalisation des tâches avant fermeture…",
+    "Aktive Arbeit wird vor dem Schließen abgeschlossen…",
+    "Finalizando tareas antes de cerrar…",
+    "Completamento delle attività prima della chiusura…"
+  ],
+  "Record": [
+    "Запись",
+    "Enregistrer",
+    "Aufnahme",
+    "Grabar",
+    "Registra"
+  ],
+  "Edit": [
+    "Редактор",
+    "Modifier",
+    "Bearbeiten",
+    "Editar",
+    "Modifica"
+  ],
+  "FINALIZING": [
+    "ЗАВЕРШЕНИЕ",
+    "FINALISATION",
+    "ABSCHLUSS",
+    "FINALIZANDO",
+    "FINALIZZAZIONE"
+  ],
+  "STARTING": [
+    "ЗАПУСК",
+    "DÉMARRAGE",
+    "START",
+    "INICIANDO",
+    "AVVIO"
+  ],
+  "PAUSED": [
+    "ПАУЗА",
+    "EN PAUSE",
+    "PAUSIERT",
+    "EN PAUSA",
+    "IN PAUSA"
+  ],
+  "RECORDING": [
+    "ЗАПИСЬ",
+    "ENREGISTREMENT",
+    "AUFNAHME",
+    "GRABANDO",
+    "REGISTRAZIONE"
+  ],
+  "Stop": [
+    "Стоп",
+    "Arrêter",
+    "Stoppen",
+    "Detener",
+    "Interrompi"
+  ],
+  "Update available": [
+    "Доступно обновление",
+    "Mise à jour disponible",
+    "Update verfügbar",
+    "Actualización disponible",
+    "Aggiornamento disponibile"
+  ],
+  "Dismiss": [
+    "Скрыть",
+    "Fermer",
+    "Schließen",
+    "Cerrar",
+    "Chiudi"
+  ],
+  "Something went wrong": [
+    "Произошла ошибка",
+    "Une erreur est survenue",
+    "Ein Fehler ist aufgetreten",
+    "Se ha producido un error",
+    "Si è verificato un errore"
+  ],
+  "Technical details": [
+    "Технические сведения",
+    "Détails techniques",
+    "Technische Details",
+    "Detalles técnicos",
+    "Dettagli tecnici"
+  ],
+  "Update check failed: {detail}": [
+    "Не удалось проверить обновления: {detail}",
+    "Échec de la vérification : {detail}",
+    "Updateprüfung fehlgeschlagen: {detail}",
+    "Error al buscar actualizaciones: {detail}",
+    "Controllo aggiornamenti non riuscito: {detail}"
+  ],
+  "Choose a recording folder": [
+    "Выберите папку для записей",
+    "Choisir un dossier d'enregistrement",
+    "Aufnahmeordner wählen",
+    "Elegir carpeta de grabaciones",
+    "Scegli una cartella di registrazione"
+  ],
+  "Open a recording": [
+    "Открыть запись",
+    "Ouvrir un enregistrement",
+    "Aufnahme öffnen",
+    "Abrir una grabación",
+    "Apri una registrazione"
+  ],
+  "ScreenRecorder recording": [
+    "Запись ScreenRecorder",
+    "Enregistrement ScreenRecorder",
+    "ScreenRecorder-Aufnahme",
+    "Grabación de ScreenRecorder",
+    "Registrazione ScreenRecorder"
+  ],
+  "Recording stopped. Completed frames have been retained.": [
+    "Запись остановлена. Готовые кадры сохранены.",
+    "Enregistrement arrêté. Les images complètes sont conservées.",
+    "Aufnahme gestoppt. Vollständige Bilder wurden erhalten.",
+    "Grabación detenida. Se conservaron los fotogramas completos.",
+    "Registrazione interrotta. I fotogrammi completi sono conservati."
+  ],
+  "Microphone could not start. Check microphone access in Windows and choose a new recording filename. Completed video and audio packets remain available.": [
+    "Не удалось включить микрофон. Проверьте доступ к микрофону в Windows и выберите новое имя записи. Готовые видео- и аудиоданные сохранены.",
+    "Le microphone n'a pas démarré. Vérifiez son accès dans Windows et choisissez un nouveau nom de fichier. Les données vidéo et audio complètes sont conservées.",
+    "Mikrofon konnte nicht starten. Prüfen Sie den Mikrofonzugriff in Windows und wählen Sie einen neuen Dateinamen. Vollständige Video- und Audiodaten bleiben erhalten.",
+    "No se pudo iniciar el micrófono. Compruebe su acceso en Windows y elija un nuevo nombre de archivo. Los datos completos de vídeo y audio se conservan.",
+    "Impossibile avviare il microfono. Verifica l'accesso in Windows e scegli un nuovo nome file. I dati video e audio completi sono conservati."
+  ],
+  "{width} × {height} · {fps} fps · {seconds} s": [
+    "{width} × {height} · {fps} кадр/с · {seconds} с",
+    "{width} × {height} · {fps} images/s · {seconds} s",
+    "{width} × {height} · {fps} Bilder/s · {seconds} s",
+    "{width} × {height} · {fps} fotogramas/s · {seconds} s",
+    "{width} × {height} · {fps} fotogrammi/s · {seconds} s"
+  ],
+  "Update failed: {detail}": [
+    "Ошибка обновления: {detail}",
+    "Échec de la mise à jour : {detail}",
+    "Aktualisierung fehlgeschlagen: {detail}",
+    "La actualización falló: {detail}",
+    "Aggiornamento non riuscito: {detail}"
+  ]
+}

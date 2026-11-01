@@ -1,11 +1,12 @@
 //! Native pickers are opened only by explicit, non-isolated UI actions.
 use anyhow::Result;
+use screen_recorder::localization::Language;
 pub enum Kind {
     Project,
     Folder,
 }
 #[cfg(windows)]
-pub fn choose(owner: isize, kind: Kind) -> Result<Option<String>> {
+pub fn choose(owner: isize, kind: Kind, language: Language) -> Result<Option<String>> {
     use windows::{
         Win32::{
             Foundation::HWND,
@@ -19,7 +20,7 @@ pub fn choose(owner: isize, kind: Kind) -> Result<Option<String>> {
                 IFileOpenDialog, SIGDN_FILESYSPATH,
             },
         },
-        core::{HRESULT, HSTRING, w},
+        core::{HRESULT, HSTRING, PCWSTR, w},
     };
     struct Com;
     impl Drop for Com {
@@ -39,13 +40,14 @@ pub fn choose(owner: isize, kind: Kind) -> Result<Option<String>> {
         match kind {
             Kind::Folder => {
                 flags |= FOS_PICKFOLDERS;
-                dialog.SetTitle(&HSTRING::from("Choose a recording folder"))?;
+                dialog.SetTitle(&HSTRING::from(language.text("Choose a recording folder")))?;
             }
             Kind::Project => {
                 flags |= FOS_FILEMUSTEXIST;
-                dialog.SetTitle(&HSTRING::from("Open a recording"))?;
+                dialog.SetTitle(&HSTRING::from(language.text("Open a recording")))?;
+                let name = HSTRING::from(language.text("ScreenRecorder recording"));
                 dialog.SetFileTypes(&[COMDLG_FILTERSPEC {
-                    pszName: w!("ScreenRecorder recording"),
+                    pszName: PCWSTR(name.as_ptr()),
                     pszSpec: w!("*.srec"),
                 }])?;
             }
@@ -65,6 +67,6 @@ pub fn choose(owner: isize, kind: Kind) -> Result<Option<String>> {
     }
 }
 #[cfg(not(windows))]
-pub fn choose(_owner: isize, _kind: Kind) -> Result<Option<String>> {
+pub fn choose(_owner: isize, _kind: Kind, _language: Language) -> Result<Option<String>> {
     anyhow::bail!("Native pickers require Windows")
 }

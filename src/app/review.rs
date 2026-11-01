@@ -159,7 +159,7 @@ fn app(
     let (tx, rx) = mpsc::sync_channel(8);
     Ok(RecorderApp{
         isolated:true,owner:0,
-        settings:Settings{startup_updates:false,output_folder:root.join("Recordings").to_string_lossy().into_owned(),fps:15,microphone:true,system_audio:true},
+        settings:Settings{startup_updates:false,output_folder:root.join("Recordings").to_string_lossy().into_owned(),fps:15,microphone:true,system_audio:true,..Default::default()},
         settings_path:root.join("settings.json"),tab:scene.tab,
         sources:vec![Target::Display{left:0,top:0,width:1920,height:1080,name:"Display 1 · 1920 × 1080 (synthetic fixture)".into()}],
         source_mode:0,selected_source:0,region:(100,100,1280,720),recording_name:"Tutorial.srec".into(),

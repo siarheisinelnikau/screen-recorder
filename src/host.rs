@@ -36,6 +36,7 @@ struct Root {
     dirty: bool,
     cleanup_done: bool,
     occluded: bool,
+    chrome_dark: bool,
 }
 impl Root {
     fn hidden(&self) -> bool {
@@ -127,6 +128,16 @@ impl Root {
             self.app.logic(ui.ctx());
             self.app.ui(ui);
         });
+        let dark = self.ctx.theme() == egui::Theme::Dark;
+        if self.chrome_dark != dark {
+            self.window.set_theme(Some(if dark {
+                winit::window::Theme::Dark
+            } else {
+                winit::window::Theme::Light
+            }));
+            crate::chrome::apply(&self.window, dark);
+            self.chrome_dark = dark;
+        }
         metrics::finish(metrics::Stage::Layout, layout, true);
         let paint = metrics::begin();
         let primitives = raster::meshes(
@@ -199,7 +210,7 @@ impl Host {
                     .with_min_inner_size(winit::dpi::LogicalSize::new(880.0, 650.0)),
             )?,
         );
-        crate::chrome::apply(&window);
+        crate::chrome::apply(&window, false);
         // winit's generic icon config assigns ICON_SMALL only on Windows.
         // Explicitly assign ICON_BIG for taskbar and Alt+Tab identity as well.
         #[cfg(windows)]
@@ -239,6 +250,7 @@ impl Host {
             dirty: true,
             cleanup_done: false,
             occluded: false,
+            chrome_dark: false,
         });
         window.set_visible(true);
         self.schedule(Instant::now());
