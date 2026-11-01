@@ -18,6 +18,9 @@ Commands ran with a repository-local `target`, two Cargo jobs and the shared thr
 - `cargo clippy --offline --locked --all-targets -- -D warnings` — passed after removing one needless reference.
 - A source/catalog audit found all localization lookup keys in the built-in catalog: 159 English messages and 795 non-English translations; no missing callsites.
 - `git diff --check` — passed.
+- `cargo build --release --offline --locked --target x86_64-pc-windows-msvc` with `-C target-feature=+crt-static` — passed. Packaged `dist/ScreenRecorder-v0.3.0.exe` (9,168,384 bytes), SHA-256 `f3fda31b5c520986d458d2613512aed9013be51e1dddc314b2046fe1e98cf19b`.
+- `scripts/notices.ps1 -Offline` and `python scripts/inspect-package.py` — passed: x64 Windows GUI, matching checksum, license/notices, no dynamic MSVC/UCRT or GPU renderer imports. This is binary inspection, not runtime backend proof.
+- `scripts/inspect-icons.ps1` — passed without executing the application: embedded 16, 20, 24, 32, 48, 64, 128 and 256 pixel icon resources loaded with nonblank alpha bounds. The actual 32-pixel resource PNG was inspected and shows the intended monitor/record symbol. OS taskbar/window assignment remains unverified for this binary.
 
 Source palette calculations (WCAG relative luminance) give the following contrast ratios. These are numeric role checks, not a rendered-screen review:
 
