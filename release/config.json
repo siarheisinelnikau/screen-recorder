@@ -1,0 +1,12 @@
+{
+  "repository": "siarheisinelnikau/screen-recorder",
+  "product": "ScreenRecorder",
+  "kind": "desktop",
+  "assets": [
+    {
+      "name": "ScreenRecorder-v{version}.exe"
+    }
+  ],
+  "notices": true,
+  "checksum_aliases": []
+}
